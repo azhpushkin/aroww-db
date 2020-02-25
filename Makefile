@@ -1,7 +1,10 @@
 .PHONY: *
 
 all:
-	g++ echo.cpp -o main.out && ./main.out
+	clang++ main.cpp engine.cpp ui.cpp -o main.out
+
+run:
+	./main.out
 
 clean:
 	rm -f *.out

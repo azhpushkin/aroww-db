@@ -2,14 +2,12 @@
 
 #include "engine.hpp"
 
-
-
 class ConsoleUI {
-    private:
-        AbstractEngine* engine;
+private:
+    AbstractEngine* engine;
 
-    public:
-        ConsoleUI(AbstractEngine*);
-        ~ConsoleUI();
-        void start_ui();
-};  
+public:
+    ConsoleUI(AbstractEngine*);
+    ~ConsoleUI();
+    void start_ui();
+};

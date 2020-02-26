@@ -10,7 +10,7 @@ created for learning purposes only.
 
 **Future plans on things to add**:
 - [ ] Static code analyzers [clang-tidy, cppcheck, clazy]
-- [ ] Sourse code formatter [clang-format]
+- [x] Sourse code formatter [clang-format]
 - [ ] Documentation and docs generation [doxygen]
 - [ ] Package managers? [Conan, vcpkg]
 - [ ] See if `fmt` lib is useful and add if needed

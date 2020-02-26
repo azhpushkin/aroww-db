@@ -6,5 +6,9 @@ all:
 run:
 	./main.out
 
+format:
+	clang-format -i --verbose --sort-includes -style=WebKit *.cpp
+	clang-format -i --verbose --sort-includes -style=WebKit *.hpp
+
 clean:
 	rm -f *.out

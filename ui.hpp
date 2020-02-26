@@ -6,10 +6,10 @@
 
 class ConsoleUI {
     private:
-        AbstractEngine engine;
+        AbstractEngine* engine;
 
     public:
-        ConsoleUI(AbstractEngine);
+        ConsoleUI(AbstractEngine*);
         ~ConsoleUI();
         void start_ui();
 };  

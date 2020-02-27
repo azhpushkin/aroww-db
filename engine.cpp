@@ -1,20 +1,24 @@
 #include "engine.hpp"
 #include <iostream>
+#include <memory>
 
-EngineResult SimpleInMemoryEngine::get(std::string key)
+SimpleInMemoryEngine::SimpleInMemoryEngine()
 {
-    std::cout << "Engine received GET: " << key << std::endl;
-    return OK;
 }
 
-EngineResult SimpleInMemoryEngine::set(std::string key, std::string value)
+std::string SimpleInMemoryEngine::get(std::string key)
 {
-    std::cout << "Engine received SET: " << key << value << std::endl;
-    return OK;
+    return storage[key];  // empty string by default
 }
 
-EngineResult SimpleInMemoryEngine::drop(std::string key)
+std::string SimpleInMemoryEngine::set(std::string key, std::string value)
 {
-    std::cout << "Engine received DROP: " << key << std::endl;
-    return OK;
+    storage[key] = value;
+    return "SET IS DONE";
+}
+
+std::string SimpleInMemoryEngine::drop(std::string key)
+{
+    storage.erase(key);
+    return "DROP IS DONE";
 }

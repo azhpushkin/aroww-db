@@ -7,9 +7,9 @@ CommandGet::CommandGet(std::string key_)
     this->type = GET;
 }
 
-void CommandGet::execute(AbstractEngine& engine)
+std::string CommandGet::execute(AbstractEngine& engine)
 {
-    engine.get(this->key);
+    return engine.get(this->key);
 }
 
 CommandSet::CommandSet(std::string key_, std::string value_)
@@ -19,9 +19,9 @@ CommandSet::CommandSet(std::string key_, std::string value_)
     this->type = SET;
 }
 
-void CommandSet::execute(AbstractEngine& engine)
+std::string CommandSet::execute(AbstractEngine& engine)
 {
-    engine.set(this->key, this->value);
+    return engine.set(this->key, this->value);
 }
 
 CommandDrop::CommandDrop(std::string key_)
@@ -30,7 +30,7 @@ CommandDrop::CommandDrop(std::string key_)
     this->type = DROP;
 }
 
-void CommandDrop::execute(AbstractEngine& engine)
+std::string CommandDrop::execute(AbstractEngine& engine)
 {
-    engine.drop(this->key);
+    return engine.drop(this->key);
 }

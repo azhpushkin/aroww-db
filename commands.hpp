@@ -15,14 +15,14 @@ class Command {
 public:
     virtual ~Command() {};
     CommandType type;
-    virtual void execute(AbstractEngine&) = 0;
+    virtual std::string execute(AbstractEngine&) = 0;
 };
 
 class CommandGet : public Command {
 public:
     std::string key;
     CommandGet(std::string key);
-    void execute(AbstractEngine&);
+    std::string execute(AbstractEngine&);
 };
 
 class CommandSet : public Command {
@@ -30,12 +30,12 @@ public:
     std::string key;
     std::string value;
     CommandSet(std::string key, std::string value);
-    virtual void execute(AbstractEngine&);
+    virtual std::string execute(AbstractEngine&);
 };
 
 class CommandDrop : public Command {
 public:
     std::string key;
     CommandDrop(std::string key);
-    void execute(AbstractEngine&);
+    std::string execute(AbstractEngine&);
 };

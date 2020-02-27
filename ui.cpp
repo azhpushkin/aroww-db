@@ -51,6 +51,7 @@ void ConsoleUI::start_ui()
             continue;
         }
 
-        command_obj->execute(*engine);
+        auto result = command_obj->execute(*engine);
+        std::cout << result << std::endl;
     }
 }

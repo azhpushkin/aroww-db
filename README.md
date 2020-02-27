@@ -16,3 +16,4 @@ created for learning purposes only.
 - [ ] See if `fmt` lib is useful and add if needed
 - [ ] Logging of event to gather metric [`spdlog` or what?]
 - [ ] Implementing some basic tests
+- [ ] Some way of writing unit tests

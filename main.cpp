@@ -1,15 +1,20 @@
+#include <iostream>
 #include "commands.hpp"
 #include "engine.hpp"
 #include "ui.hpp"
-#include <iostream>
+#include "server.c"
+
+SimpleInMemoryEngine engine;
 
 int main()
 {
-    SimpleInMemoryEngine engine; // TODO: 2-step initialize?
 
-    ConsoleUI ui { &engine };
+    // ConsoleUI ui { &engine };
 
-    ui.start_ui();
+    // ui.start_ui();
+
+    callback = &(Parser::parse);
+    start_listening();
 
     return 0;
 }

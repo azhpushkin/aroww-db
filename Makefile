@@ -1,7 +1,7 @@
 .PHONY: *
 
 all:
-	clang++ main.cpp engine.cpp ui.cpp commands.cpp -o main.out
+	clang++ -x c server.c -x c++ main.cpp engine.cpp ui.cpp commands.cpp -lpthread -o main.out
 
 run:
 	./main.out

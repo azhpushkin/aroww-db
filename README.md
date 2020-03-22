@@ -14,6 +14,6 @@ created for learning purposes only.
 - [ ] Documentation and docs generation [doxygen]
 - [ ] Package managers? [Conan, vcpkg]
 - [ ] See if `fmt` lib is useful and add if needed
-- [ ] Logging of event to gather metric [`spdlog` or what?]
+- [ ] Logging of event to gather metric [`spdlog` or what?] *IMPORTANT QUITE SOON*
 - [ ] Implementing some basic tests
 - [ ] Some way of writing unit tests

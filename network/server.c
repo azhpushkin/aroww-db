@@ -12,16 +12,19 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define MYPORT 3490 /* the port users will be connecting to */
 #define BACKLOG 10 /* how many pending connections queue will hold */
 
-void (*callback)(char*, char*);
+typedef struct thread_args {
+    int* socket;
+    void (*callback)(char*, char*);
+} thread_args;
 
 void* socket_thread(void* ptr)
 {
+    thread_args* args = (thread_args*)ptr;
     char buffer[512];
     char ret[512];
-    int socket = *((int*)ptr);
+    int socket = *(args->socket);
     int result;
 
     while (1) {
@@ -34,7 +37,7 @@ void* socket_thread(void* ptr)
             perror("Error receiving from connection!");
             break;
         }
-        callback(buffer, ret);
+        (args->callback)(buffer, ret);
         send(socket, ret, strlen(ret), 0);
     }
 
@@ -42,7 +45,7 @@ void* socket_thread(void* ptr)
     pthread_exit(0);
 }
 
-int start_listening()
+int listen_on_port(int port, void (*callback)(char*, char*))
 {
     int sockfd, new_fd; /* listen on sock_fd, new connection on new_fd */
     struct sockaddr_in my_addr; /* my address information */
@@ -59,7 +62,7 @@ int start_listening()
         perror("setsockopt(SO_REUSEADDR) failed");
 
     my_addr.sin_family = AF_INET; /* host byte order */
-    my_addr.sin_port = htons(MYPORT); /* short, network byte order */
+    my_addr.sin_port = htons(port); /* short, network byte order */
     my_addr.sin_addr.s_addr = INADDR_ANY; /* auto-fill with my IP */
     bzero(&(my_addr.sin_zero), 8); /* zero the rest of the struct */
 
@@ -81,7 +84,8 @@ int start_listening()
             continue;
         }
         printf("server: got connection from %s\n", inet_ntoa(their_addr.sin_addr));
-        pthread_create(&thread, 0, socket_thread, (void*)&new_fd);
+        thread_args args = { &new_fd, callback };
+        pthread_create(&thread, 0, socket_thread, (void*)&args);
         pthread_detach(thread);
     }
 

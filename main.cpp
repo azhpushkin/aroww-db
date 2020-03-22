@@ -1,20 +1,14 @@
-#include "commands.hpp"
-#include "engine.hpp"
-#include "server.c"
-#include "ui.hpp"
-#include <iostream>
-
-SimpleInMemoryEngine engine;
+#include "engine/engine.hpp"
+#include "network/simple_socket_server.hpp"
+#include <memory>
 
 int main()
 {
+    SimpleInMemoryEngine engine;
 
-    // ConsoleUI ui { &engine };
-
-    // ui.start_ui();
-
-    callback = &(Parser::parse);
-    start_listening();
+    SimpleSocketServer socket_server { 3490 };
+    socket_server.connect_engine(&engine);
+    socket_server.start_listening();
 
     return 0;
 }

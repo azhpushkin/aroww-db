@@ -1,14 +1,15 @@
+PROJ_DIR = $(shell pwd)
 BUILD_DIR = .build
 CXX = clang++
 CC = clang
 
 DEBUG_FLAGS = -g
-CXXFLAGS = -Wall
+CXXFLAGS = -Wall -I $(PROJ_DIR)
 CCFLAGS = $(CXXFLAGS)
 LDLIBS = -lpthread
 
-CCSOURCES = server.c
-CXXSOURCES = commands.cpp  engine.cpp  main.cpp  ui.cpp
+CCSOURCES = network/server.c network/simple_socket_server.cpp
+CXXSOURCES = engine/commands.cpp  engine/engine.cpp  main.cpp
 CCOBJECTS=$(CCSOURCES:%.c=$(BUILD_DIR)/%.o)
 CXXOBJECTS=$(CXXSOURCES:%.cpp=$(BUILD_DIR)/%.o)
 
@@ -34,9 +35,14 @@ run: $(EXECUTABLE)
 
 $(BUILD_DIR):
 	mkdir $(BUILD_DIR) -p
+	mkdir $(BUILD_DIR)/network -p
+	mkdir $(BUILD_DIR)/engine -p
 
 format:
-	clang-format -i --verbose --sort-includes -style=WebKit *.cpp *.c *.hpp
+	clang-format -i --verbose --sort-includes -style=WebKit \
+	    $(shell find . -name "*.cpp" -o -name "*.hpp" -o -name "*.c" -o -name "*.h")
+	# clang-format -i --verbose --sort-includes -style=WebKit $(shell find . -name "*.hpp")
+	# clang-format -i --verbose --sort-includes -style=WebKit $(shefind . -name "*.c")
 
 clean:
 	rm -rf *.out *.o

@@ -39,8 +39,3 @@ public:
     CommandDrop(std::string key);
     std::string execute(AbstractEngine&);
 };
-
-class Parser {
-public:
-    static void parse(char*, char*);
-};

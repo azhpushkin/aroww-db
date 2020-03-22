@@ -1,30 +1,28 @@
+#include <arpa/inet.h>
+#include <errno.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <pthread.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <arpa/inet.h>
+#include <sys/types.h>
 #include <sys/wait.h>
-#include <signal.h>
-#include <pthread.h>
+#include <unistd.h>
 
+#define MYPORT 3490 /* the port users will be connecting to */
+#define BACKLOG 10 /* how many pending connections queue will hold */
 
-#define MYPORT 3490    /* the port users will be connecting to */
-#define BACKLOG 10     /* how many pending connections queue will hold */
+void (*callback)(char*, char*);
 
-void (*callback) (char*, char*);
-
-
-void* socket_thread(void *ptr) {
+void* socket_thread(void* ptr)
+{
     char buffer[512];
     char ret[512];
-	int socket = *((int*)ptr);
+    int socket = *((int*)ptr);
     int result;
-
 
     while (1) {
         result = recv(socket, buffer, 512, 0);
@@ -46,8 +44,8 @@ void* socket_thread(void *ptr) {
 
 int start_listening()
 {
-    int sockfd, new_fd;  /* listen on sock_fd, new connection on new_fd */
-    struct sockaddr_in my_addr;    /* my address information */
+    int sockfd, new_fd; /* listen on sock_fd, new connection on new_fd */
+    struct sockaddr_in my_addr; /* my address information */
     struct sockaddr_in their_addr; /* connector's address information */
     socklen_t sin_size;
     pthread_t thread;
@@ -60,13 +58,13 @@ int start_listening()
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
         perror("setsockopt(SO_REUSEADDR) failed");
 
-    my_addr.sin_family = AF_INET;         /* host byte order */
-    my_addr.sin_port = htons(MYPORT);     /* short, network byte order */
+    my_addr.sin_family = AF_INET; /* host byte order */
+    my_addr.sin_port = htons(MYPORT); /* short, network byte order */
     my_addr.sin_addr.s_addr = INADDR_ANY; /* auto-fill with my IP */
-    bzero(&(my_addr.sin_zero), 8);        /* zero the rest of the struct */
+    bzero(&(my_addr.sin_zero), 8); /* zero the rest of the struct */
 
-    if (bind(sockfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr)) \
-                                                                    == -1) {
+    if (bind(sockfd, (struct sockaddr*)&my_addr, sizeof(struct sockaddr))
+        == -1) {
         perror("bind");
         exit(1);
     }
@@ -76,14 +74,14 @@ int start_listening()
         exit(1);
     }
 
-    while(1) {  /* main accept() loop */
+    while (1) { /* main accept() loop */
         sin_size = sizeof(struct sockaddr_in);
-        if ((new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size)) == -1) {
+        if ((new_fd = accept(sockfd, (struct sockaddr*)&their_addr, &sin_size)) == -1) {
             perror("accept");
             continue;
         }
         printf("server: got connection from %s\n", inet_ntoa(their_addr.sin_addr));
-        pthread_create(&thread, 0, socket_thread, (void *)&new_fd);
+        pthread_create(&thread, 0, socket_thread, (void*)&new_fd);
         pthread_detach(thread);
     }
 

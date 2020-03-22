@@ -40,7 +40,6 @@ public:
     std::string execute(AbstractEngine&);
 };
 
-
 class Parser {
 public:
     static void parse(char*, char*);

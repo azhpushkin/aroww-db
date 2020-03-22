@@ -8,7 +8,7 @@ SimpleInMemoryEngine::SimpleInMemoryEngine()
 
 std::string SimpleInMemoryEngine::get(std::string key)
 {
-    return storage[key];  // empty string by default
+    return storage[key]; // empty string by default
 }
 
 std::string SimpleInMemoryEngine::set(std::string key, std::string value)

@@ -1,8 +1,8 @@
-#include <iostream>
 #include "commands.hpp"
 #include "engine.hpp"
-#include "ui.hpp"
 #include "server.c"
+#include "ui.hpp"
+#include <iostream>
 
 SimpleInMemoryEngine engine;
 

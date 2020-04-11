@@ -16,7 +16,7 @@
 
 typedef struct thread_args {
     int* socket;
-    void (*callback)(char*, char*);
+    void (*callback)(char*, char*, int*);
 } thread_args;
 
 void* socket_thread(void* ptr)
@@ -28,6 +28,8 @@ void* socket_thread(void* ptr)
     int result;
 
     while (1) {
+        memset(buffer, 0, 500);
+        memset(ret, 0, 500);
         result = recv(socket, buffer, 512, 0);
         if (result == 0) {
             printf("Connection closed!\n");
@@ -37,15 +39,22 @@ void* socket_thread(void* ptr)
             perror("Error receiving from connection!");
             break;
         }
-        (args->callback)(buffer, ret);
-        send(socket, ret, strlen(ret), 0);
+        (args->callback)(buffer, ret, &result);
+        if (result == 0) {
+            send(socket, "OK.", strlen("OK."), 0);
+        } else if (result == 1) {
+            send(socket, ret, strlen(ret), 0);
+        } else {
+            send(socket, "ERROR!!", strlen("ERROR!"), 0);
+        }
+        
     }
 
     close(socket);
     pthread_exit(0);
 }
 
-int listen_on_port(int port, void (*callback)(char*, char*))
+int listen_on_port(int port, void (*callback)(char*, char*, int*))
 {
     int sockfd, new_fd; /* listen on sock_fd, new connection on new_fd */
     struct sockaddr_in my_addr; /* my address information */

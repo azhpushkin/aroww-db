@@ -8,7 +8,7 @@ private:
 
     static AbstractEngine* _engine;
     static SimpleSocketServer* _instance;
-    static void parse_and_process_message(char*, char*);
+    static void parse_and_process_message(char*, char*, int*);
 
 public:
     SimpleSocketServer(int);

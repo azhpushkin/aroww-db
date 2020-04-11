@@ -4,7 +4,7 @@
 #include <string.h>
 
 extern "C" {
-void listen_on_port(int port, void (*callback)(char*, char*));
+void listen_on_port(int port, void (*callback)(char*, char*, int*));
 }
 
 SimpleSocketServer* SimpleSocketServer::_instance = nullptr;
@@ -28,35 +28,21 @@ void SimpleSocketServer::start_listening()
     listen_on_port(port, parse_and_process_message);
 }
 
-void SimpleSocketServer::parse_and_process_message(char* input, char* output)
-{
-    int res;
-    char key[128];
-    char value[128];
-
-    for (char* p = input; *p; ++p)
-        *p = tolower(*p);
-
+void SimpleSocketServer::parse_and_process_message(char* input, char* output, int* status)
+{   
     Command* command;
-
-    if ((res = sscanf(input, "get %s", key)) == 1) {
-
-        std::cout << "GET " << std::string(key) << std::endl;
-        command = new CommandGet { std::string(key) };
-
-    } else if ((res = sscanf(input, "drop %s", key)) == 1) {
-        std::cout << "DROP " << std::string(key) << std::endl;
-        command = new CommandDrop { std::string(key) };
-
-    } else if ((res = sscanf(input, "set %s %s", key, value)) == 2) {
-        std::cout << "SET " << std::string(key) << " TO " << value << std::endl;
-        command = new CommandSet { std::string(key), std::string(value) };
-    } else {
-        std::cout << "Unknown command: " << std::string(input) << std::endl;
-        sprintf(output, "Unknown command!\n");
+    try {
+        command = Command::deserialize(std::string(input));
+    } catch (UnknownCommandException& e) {
+        std::cout << "Unknown command " << input << " received!" << std::endl;
+        *status = -1;
         return;
     }
-
+    
     std::string command_res = command->execute(*(SimpleSocketServer::_engine));
+    std::cout << "Executed command" << input << ", res is [" << command_res << "]" << std::endl;
     sprintf(output, "%s\n", command_res.c_str());
+    if (command->type == GET) *status = 1;
+    else                      *status = 0;
+    delete command;
 }

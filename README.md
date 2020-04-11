@@ -1,4 +1,4 @@
-### Arrow DB
+### Aroww DB
 
 Inspired by "Designing Data-Intensive Applications" book and
 "What I cannot create I do not understand" quote by R. Feynman.

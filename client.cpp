@@ -10,8 +10,10 @@
 
 #include <arpa/inet.h>
 
-#include "engine/commands.hpp"
 #include <iostream>
+#include <fmt/format.h>
+
+#include "proto_dist/commands.pb.h"
 
 #define PORT "3490" // the port client will be connecting to 
 
@@ -23,34 +25,52 @@ void start_messaging(int sockdf) {
     char key[128];
     char value[128];
     char input[128];
-    Command* command;
+
+	std::string command_str;
+	DBCommand command;
 
     while(1) {
-        fgets(input, 128, stdin);
+		command.clear_key();
+		command.clear_value();
+		command.clear_type();
+
+        std::cout << "cli> " << std::flush;
+		fgets(input, 128, stdin);
 
         for (char* p = input; *p; ++p)
             *p = tolower(*p);
 
         if ((res = sscanf(input, "get %s", key)) == 1) {
-            command = new CommandGet { std::string(key) };
+			command.set_type(DBCommandType::GET);
+			command.set_key(std::string(key));
         } else if ((res = sscanf(input, "drop %s", key)) == 1) {
-            command = new CommandDrop { std::string(key) };
+            command.set_type(DBCommandType::DROP);
+			command.set_key(std::string(key));
         } else if ((res = sscanf(input, "set %s %s", key, value)) == 2) {
-            command = new CommandSet { std::string(key), std::string(value) };
+            command.set_type(DBCommandType::SET);
+			command.set_key(std::string(key));
+			command.set_value(std::string(value));
         } else if ((res = sscanf(input, "q")) == 1) {
+			std::cout << "Quitting!.." << std::endl;
             break;
         } else {
-            printf("Command %s unknown\n", input);
+			sscanf(input, "%s", input);  // truncate
+			std::cout << "Command " << input << " is unknown" << std::endl;	
             continue;
         }
 
-        std::string data = command->serialize();
-        send(sockdf, data.c_str(), data.length(), 0);
-        memset(input, 0, 128);
+		command.SerializeToString(&command_str);
+		send(sockdf, command_str.c_str(), command_str.length(), 0);
+        
+		memset(input, 0, 128);
         recv(sockdf, input, 128, 0);
-        // TODO: Handle this is a better way. empty string return and send works badly.
-        sscanf(input, "%s", input);  // truncate, lol
-        std::cout << "GOT:" << input << std::endl;
+        DBCommandResult result;
+		result.ParseFromString(std::string(input));
+		std::string type;
+        if (result.type() == 1) type = "OK";
+        if (result.type() == 2) type = "KEY_MISSING";
+        if (result.type() == 3) type = "ERROR";
+        std::cout << fmt::format("{}(value={},err={})", type, result.value(), result.error_msg()) << std::endl;
     }
 }
 

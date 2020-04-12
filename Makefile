@@ -1,16 +1,20 @@
 PROJ_DIR = $(shell pwd)
 BUILD_DIR = .build
-CXX = clang++
-CC = clang
+CC = clang++
 
 DEBUG_FLAGS = -g
-CXXFLAGS = -Wall -I $(PROJ_DIR) $(DEBUG_FLAGS)
-CCFLAGS = $(CXXFLAGS)
-LDLIBS = -lpthread
+CCFLAGS = -std=c++17 -Wall -I $(PROJ_DIR) $(DEBUG_FLAGS)
+LDLIBS = -pthread -lprotobuf -lpthread -lspdlog -lfmt
 
 
-SOURCES = engine/commands.cpp  engine/engine.cpp network/server.c network/simple_socket_server.cpp
+PROTO_OUT_DIR = proto_dist
+
+SOURCES = engine/engine.cpp \
+		  network/socket_server.cpp \
+		  proto_dist/commands.pb.cc
+
 OBJECTS=$(SOURCES:%=$(BUILD_DIR)/%.o)
+
 
 SERVER_SRC = server.cpp
 CLIENT_SRC = client.cpp
@@ -23,16 +27,16 @@ all: $(BUILD_DIR) $(OBJECTS) $(SERVER_EXEC) $(CLIENT_EXEC)
 $(SERVER_EXEC): $(OBJECTS) $(SERVER_SRC:%=$(BUILD_DIR)/%.o)
 $(CLIENT_EXEC): $(OBJECTS) $(CLIENT_SRC:%=$(BUILD_DIR)/%.o)
 $(SERVER_EXEC) $(CLIENT_EXEC):
-	$(CXX) $(CXXFLAGS) \
+	$(CC) $(CCFLAGS) \
 	       $(LDLIBS) \
 		   $^ -o $@
 # $^ means "prerequisites for this target", which are objects
 
-$(BUILD_DIR)/%.c.o : %.c
+$(BUILD_DIR)/%.cpp.o : %.cpp
 	$(CC) $(CCFLAGS) $< -c -o $@
 
-$(BUILD_DIR)/%.cpp.o : %.cpp
-	$(CXX) $(CXXFLAGS) $< -c -o $@
+$(BUILD_DIR)/%.cc.o : %.cc
+	$(CC) $(CCFLAGS) $< -c -o $@
 
 run serve: $(SERVER_EXEC)
 	$(SERVER_EXEC)
@@ -45,6 +49,11 @@ $(BUILD_DIR):
 	mkdir $(BUILD_DIR) -p
 	mkdir $(BUILD_DIR)/network -p
 	mkdir $(BUILD_DIR)/engine -p
+	mkdir $(BUILD_DIR)/proto_dist -p
+
+proto:
+	mkdir $(PROTO_OUT_DIR) -p
+	protoc -I $(PROJ_DIR) --cpp_out=$(PROTO_OUT_DIR) commands.proto
 
 format:
 	clang-format -i --verbose --sort-includes -style=WebKit \

@@ -1,24 +1,28 @@
 #include "engine.hpp"
 #include <iostream>
 #include <memory>
+#include <stdexcept>
+#include <optional>
 
-SimpleInMemoryEngine::SimpleInMemoryEngine()
-{
-}
+SimpleInMemoryEngine::SimpleInMemoryEngine() {}
 
-std::string SimpleInMemoryEngine::get(std::string key)
+OpResult SimpleInMemoryEngine::get(std::string key)
 {   
-    return storage[key]; // empty string by default
+    try {
+        return OpResult {true, storage.at(key), std::nullopt};
+    } catch (std::out_of_range &e) {
+        return OpResult {false, std::nullopt, "Key missing"};
+    }
 }
 
-std::string SimpleInMemoryEngine::set(std::string key, std::string value)
+OpResult SimpleInMemoryEngine::set(std::string key, std::string value)
 {
     storage[key] = value;
-    return "SET IS DONE";
+    return OpResult {true, std::nullopt, std::nullopt};
 }
 
-std::string SimpleInMemoryEngine::drop(std::string key)
+OpResult SimpleInMemoryEngine::drop(std::string key)
 {
     storage.erase(key);
-    return "DROP IS DONE";
+    return OpResult {true, std::nullopt, std::nullopt};
 }

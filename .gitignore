@@ -34,3 +34,7 @@
 
 # VSCode
 .vscode
+
+
+# Proto out dir
+proto_dist/

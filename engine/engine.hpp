@@ -2,12 +2,20 @@
 
 #include <iostream>
 #include <map>
+#include <optional>
+
+class OpResult {
+public:
+    bool success;
+    std::optional<std::string> value;
+    std::optional<std::string> error_msg;
+};
 
 class AbstractEngine {
 public:
-    virtual std::string get(std::string key) = 0;
-    virtual std::string set(std::string key, std::string value) = 0;
-    virtual std::string drop(std::string key) = 0;
+    virtual OpResult get(std::string key) = 0;
+    virtual OpResult set(std::string key, std::string value) = 0;
+    virtual OpResult drop(std::string key) = 0;
 };
 
 class SimpleInMemoryEngine : public AbstractEngine {
@@ -16,7 +24,7 @@ private:
 
 public:
     SimpleInMemoryEngine();
-    std::string get(std::string key);
-    std::string set(std::string key, std::string value);
-    std::string drop(std::string key);
+    OpResult get(std::string key);
+    OpResult set(std::string key, std::string value);
+    OpResult drop(std::string key);
 };

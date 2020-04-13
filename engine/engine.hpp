@@ -10,6 +10,8 @@ public:
     std::optional<std::string> value;
     std::optional<std::string> error_msg;
 };
+bool operator==(const OpResult& lhs, const OpResult& rhs);
+bool operator!=(const OpResult& lhs, const OpResult& rhs);
 
 class AbstractEngine {
 public:

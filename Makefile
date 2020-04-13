@@ -17,16 +17,22 @@ OBJECTS=$(SOURCES:%=$(BUILD_DIR)/%.o)
 
 
 SERVER_SRC = server.cpp
-CLIENT_SRC = client.cpp
+CLIENT_SRC = lib/aroww.cpp client.cpp 
+TESTS_SRC = tests.cpp
 
 SERVER_EXEC=$(BUILD_DIR)/server.out
 CLIENT_EXEC=$(BUILD_DIR)/client.out
+TESTS_EXEC=$(BUILD_DIR)/tests.out
 
-all: $(BUILD_DIR) $(OBJECTS) $(SERVER_EXEC) $(CLIENT_EXEC)
+all: $(BUILD_DIR) proto $(OBJECTS) $(SERVER_EXEC) $(CLIENT_EXEC)
 
 $(SERVER_EXEC): $(OBJECTS) $(SERVER_SRC:%=$(BUILD_DIR)/%.o)
 $(CLIENT_EXEC): $(OBJECTS) $(CLIENT_SRC:%=$(BUILD_DIR)/%.o)
-$(SERVER_EXEC) $(CLIENT_EXEC):
+$(TESTS_EXEC): $(OBJECTS) $(TESTS_SRC:%=$(BUILD_DIR)/%.o)
+
+
+$(CLIENT_EXEC): $(OBJECTS) $(CLIENT_SRC:%=$(BUILD_DIR)/%.o)
+$(SERVER_EXEC) $(CLIENT_EXEC) $(TESTS_EXEC):
 	$(CC) $(CCFLAGS) \
 	       $(LDLIBS) \
 		   $^ -o $@
@@ -44,12 +50,15 @@ run serve: $(SERVER_EXEC)
 client cli: $(CLIENT_EXEC)
 	$(CLIENT_EXEC) localhost
 
+test tests: $(TESTS_EXEC)
+	$(TESTS_EXEC)
 
 $(BUILD_DIR):
 	mkdir $(BUILD_DIR) -p
 	mkdir $(BUILD_DIR)/network -p
 	mkdir $(BUILD_DIR)/engine -p
 	mkdir $(BUILD_DIR)/proto_dist -p
+	mkdir $(BUILD_DIR)/lib -p
 
 proto:
 	mkdir $(PROTO_OUT_DIR) -p

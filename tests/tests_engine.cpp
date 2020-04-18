@@ -1,8 +1,6 @@
-#include "engine/engine.hpp"
-
-#define CATCH_CONFIG_MAIN  
 #include "catch2/catch.hpp"
 
+#include "engine/engine.hpp"
 
 SimpleInMemoryEngine engine{};
 

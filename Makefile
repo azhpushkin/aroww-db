@@ -18,7 +18,7 @@ OBJECTS=$(SOURCES:%=$(BUILD_DIR)/%.o)
 
 SERVER_SRC = server.cpp
 CLIENT_SRC = lib/aroww.cpp client.cpp 
-TESTS_SRC = tests.cpp
+TESTS_SRC = tests/tests_main.cpp tests/tests_engine.cpp
 
 SERVER_EXEC=$(BUILD_DIR)/server.out
 CLIENT_EXEC=$(BUILD_DIR)/client.out
@@ -55,7 +55,7 @@ run serve: $(SERVER_EXEC)
 client cli: $(CLIENT_EXEC)
 	$(CLIENT_EXEC) localhost
 
-test tests: $(TESTS_EXEC)
+test tests: $(BUILD_DIR) $(TESTS_EXEC)
 	$(TESTS_EXEC)
 
 $(BUILD_DIR):
@@ -64,6 +64,7 @@ $(BUILD_DIR):
 	mkdir $(BUILD_DIR)/engine -p
 	mkdir $(BUILD_DIR)/proto_dist -p
 	mkdir $(BUILD_DIR)/lib -p
+	mkdir $(BUILD_DIR)/tests -p
 
 proto:
 	mkdir $(PROTO_OUT_DIR) -p

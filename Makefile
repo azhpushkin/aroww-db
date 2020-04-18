@@ -36,6 +36,11 @@ $(SERVER_EXEC) $(CLIENT_EXEC) $(TESTS_EXEC):
 	$(CC) $(CCFLAGS) \
 	       $(LDLIBS) \
 		   $^ -o $@
+
+lib: $(BUILD_DIR) $(OBJECTS)
+	ar sr $(BUILD_DIR)/lib.a $(OBJECTS) .build/lib/aroww.cpp.o
+	ar -t $(BUILD_DIR)/lib.a
+	cp $(BUILD_DIR)/lib.a  bench/
 # $^ means "prerequisites for this target", which are objects
 
 $(BUILD_DIR)/%.cpp.o : %.cpp

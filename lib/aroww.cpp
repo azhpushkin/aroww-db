@@ -28,6 +28,8 @@ void *get_in_addr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
+ArowwConnection::ArowwConnection(std::string host_, std::string port_) : host(host_), port(port_) {}
+
 int ArowwConnection::open_conn() {
     int sockfd;  
 	struct addrinfo hints, *servinfo, *p;

@@ -1,39 +1,49 @@
 #include "base_connection.cpp"
-#include <pqxx/pqxx>
+#include <libpq-fe.h>
 
 
 
 class PostgresConn: public BaseConnection {
 private:
-    pqxx::connection* c;
+    PGconn* c;
 public:
     PostgresConn() {
-        c = new pqxx::connection(
-            "user=postgres "
-            "host=localhost "
-            "dbname=arowwbench");
+        c = PQconnectdb("user=postgres host=127.0.0.1 dbname=arowwbench");
+        if(PQstatus(c) != CONNECTION_OK)
+            exit(1);
     }
 
     void get(std::string k) {
-        pqxx::work txn{*c};
-        pqxx::result res = txn.exec("SELECT vvalue "
-                                    "FROM kvstore "
-                                    "WHERE kkey = " + txn.quote(k) + " LIMIT 1");
-        txn.commit();
+        const char* query =
+        "SELECT vvalue "
+        "FROM kvstore "
+        "WHERE kkey = $1;";
+        const char* params[1];
+        params[0] = k.c_str();
+        
+        PGresult* res = PQexecParams(c, query, 1, NULL, params, NULL, NULL, 0);
     }
 
     void set(std::string k, std::string v) {
-        pqxx::work txn{*c};
-        pqxx::result res = txn.exec("INSERT INTO kvstore "
-                                    "VALUES (" + txn.quote(k) + ", " + txn.quote(v) + ") "
-                                    "ON CONFLICT (kkey) DO UPDATE SET vvalue = excluded.vvalue");
-        txn.commit();
+        const char* query =
+        "INSERT INTO kvstore (kkey, vvalue) "
+        "VALUES ($1, $2) "
+        "ON CONFLICT (kkey) DO UPDATE SET vvalue = excluded.vvalue;";
+        const char* params[2];
+        params[0] = k.c_str();
+        params[1] = v.c_str();
+
+        PGresult* res = PQexecParams(c, query, 2, NULL, params, NULL, NULL, 0);
     }
 
     void drop(std::string k) {
-        pqxx::work txn{*c};
-        pqxx::result res = txn.exec("DELETE FROM kvstore "
-                                    "WHERE kkey = " + txn.quote(k));
-        txn.commit();
+        const char* query =
+        "DELETE FROM kvstore "
+        "WHERE kkey = $1;";
+        const char* params[1];
+        params[0] = k.c_str();
+
+        PGresult* res = PQexecParams(c, query, 1, NULL, params, NULL, NULL, 0);
+            
     }
 };

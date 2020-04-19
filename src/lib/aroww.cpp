@@ -13,7 +13,7 @@
 #include <iostream>
 #include <fmt/format.h>
 
-#include "proto_dist/commands.pb.h"
+#include "commands.pb.h"
 #include "aroww.hpp"
 
 #define MAXDATASIZE 100 // max number of bytes we can get at once 

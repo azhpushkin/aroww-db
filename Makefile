@@ -9,9 +9,7 @@ LDLIBS = -pthread -lprotobuf -lpthread -lspdlog -lfmt
 
 PROTO_OUT_DIR = proto_dist
 
-SOURCES = engine/engine.cpp \
-		  network/socket_server.cpp \
-		  proto_dist/commands.pb.cc
+SOURCES = 
 
 OBJECTS=$(SOURCES:%=$(BUILD_DIR)/%.o)
 
@@ -69,12 +67,6 @@ $(BUILD_DIR):
 proto:
 	mkdir $(PROTO_OUT_DIR) -p
 	protoc -I $(PROJ_DIR) --cpp_out=$(PROTO_OUT_DIR) commands.proto
-
-format:
-	clang-format -i --verbose --sort-includes -style=WebKit \
-	    $(shell find . -name "*.cpp" -o -name "*.hpp" -o -name "*.c" -o -name "*.h")
-	# clang-format -i --verbose --sort-includes -style=WebKit $(shell find . -name "*.hpp")
-	# clang-format -i --verbose --sort-includes -style=WebKit $(shefind . -name "*.c")
 
 clean:
 	rm -rf *.out *.o

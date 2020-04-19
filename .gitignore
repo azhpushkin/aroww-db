@@ -36,5 +36,9 @@
 .vscode
 
 
-# Proto out dir
-proto_dist/
+# Cmake build directory
+build/
+
+# Protocol buffer generated files
+*.pb.cc
+*.pb.h

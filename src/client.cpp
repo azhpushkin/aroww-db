@@ -44,7 +44,7 @@ Command parse_input(std::string input) {
 
 
 
-int main(int argc, char *argv[])
+int main()
 {
 	ArowwConnection conn{std::string("localhost"), std::string("3490")};
 	ArowwResult res;

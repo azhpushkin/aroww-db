@@ -1,5 +1,5 @@
 #include <iostream>
-#include "proto_dist/commands.pb.h"
+#include <optional>
 
 
 class ArowwResult {
@@ -10,14 +10,6 @@ public:
 };
 
 class ArowwConnection {
-private:
-    std::string host;
-    std::string port;
-    
-    int fd_socket;
-
-    ArowwResult send_command(DBCommand&);
-
 public:
     ArowwConnection(std::string host_, std::string port_);
     int open_conn();

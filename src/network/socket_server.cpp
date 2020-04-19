@@ -17,7 +17,7 @@
 #include "socket_server.hpp"
 #include "engine/engine.hpp"
 
-#include "proto_dist/commands.pb.h"
+#include "commands.pb.h"
 
 
 #define BACKLOG 10

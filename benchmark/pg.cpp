@@ -1,4 +1,4 @@
-#include "base_connection.cpp"
+#include "base_connection.hpp"
 #include <libpq-fe.h>
 
 
@@ -21,7 +21,7 @@ public:
         const char* params[1];
         params[0] = k.c_str();
         
-        PGresult* res = PQexecParams(c, query, 1, NULL, params, NULL, NULL, 0);
+        PQexecParams(c, query, 1, NULL, params, NULL, NULL, 0);
     }
 
     void set(std::string k, std::string v) {
@@ -33,7 +33,7 @@ public:
         params[0] = k.c_str();
         params[1] = v.c_str();
 
-        PGresult* res = PQexecParams(c, query, 2, NULL, params, NULL, NULL, 0);
+        PQexecParams(c, query, 2, NULL, params, NULL, NULL, 0);
     }
 
     void drop(std::string k) {
@@ -43,7 +43,7 @@ public:
         const char* params[1];
         params[0] = k.c_str();
 
-        PGresult* res = PQexecParams(c, query, 1, NULL, params, NULL, NULL, 0);
+        PQexecParams(c, query, 1, NULL, params, NULL, NULL, 0);
             
     }
 };

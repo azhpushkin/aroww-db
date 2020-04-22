@@ -1,4 +1,4 @@
-#include "base_connection.cpp"
+#include "base_connection.hpp"
 #include "aroww.hpp"
 
 class ArowwConn: public BaseConnection {

@@ -3,7 +3,10 @@
 #include <vector>
 #include <chrono>
 #include <unistd.h>
+
+#include "base_connection.hpp"
 #include "ar.cpp"
+#include "pg.cpp"
 
 
 std::vector<std::string> get_keys;
@@ -42,34 +45,45 @@ std::cout << what << " done in "
 		<< " secs" << std::endl;
 }
 
-int main() {
+
+void run_for(BaseConnection* conn) {
     auto start = std::chrono::steady_clock::now();
-    read_data();
     auto end = std::chrono::steady_clock::now();
-    pr("READ", start, end);
-
-
-    ArowwConn conn{};
 
     std::cout << "Doing SET" << std::endl;
     start = std::chrono::steady_clock::now();
-    for (int i = 0; i < set_keys.size(); i++) conn.set(set_keys[i], set_values[i]);
+    for (std::size_t i = 0; i < set_keys.size(); i++) conn->set(set_keys[i], set_values[i]);
     end = std::chrono::steady_clock::now();
     pr("SET", start, end);
 
     std::cout << "Doing GET" << get_keys.size() << std::endl;
     start = std::chrono::steady_clock::now();
-    for (int i = 0; i < get_keys.size(); i++) {
-        conn.get(get_keys[i]);
+    for (std::size_t i = 0; i < get_keys.size(); i++) {
+        conn->get(get_keys[i]);
     }
     end = std::chrono::steady_clock::now();
     pr("GET", start, end);
 
     std::cout << "Doing DROP" << std::endl;
     start = std::chrono::steady_clock::now();
-    for (int i = 0; i < drop_keys.size(); i++) conn.drop(drop_keys[i]);
+    for (std::size_t i = 0; i < drop_keys.size(); i++) conn->drop(drop_keys[i]);
     end = std::chrono::steady_clock::now();
     pr("DROP", start, end);
+}
+
+int main() {
+    auto start = std::chrono::steady_clock::now();
+    read_data();
+    auto end = std::chrono::steady_clock::now();
+    pr("Read all keys:", start, end);
+
+    std::cout << "Running psql: " << std::endl;
+    PostgresConn pg{};
+    run_for(&pg);
+
+    std::cout << "Running aroww db: " << std::endl;
+    ArowwConn ar{};
+    run_for(&ar);
 
     return 0;
 }

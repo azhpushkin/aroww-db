@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <fstream>
 #include <map>
 #include <optional>
 
@@ -26,6 +27,18 @@ private:
 
 public:
     SimpleInMemoryEngine();
+    OpResult get(std::string key);
+    OpResult set(std::string key, std::string value);
+    OpResult drop(std::string key);
+};
+
+
+class SingleFileLogEngine : public AbstractEngine {
+private:
+    std::fstream file;
+
+public:
+    SingleFileLogEngine(std::string filename);
     OpResult get(std::string key);
     OpResult set(std::string key, std::string value);
     OpResult drop(std::string key);

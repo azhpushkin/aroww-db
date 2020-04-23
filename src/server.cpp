@@ -4,7 +4,7 @@
 
 int main()
 {
-    SimpleInMemoryEngine engine;
+    SingleFileLogEngine engine{"/home/maqquettex/projects/aroww-db/build/file.txt"};
 
     SimpleSocketServer socket_server { 3490, engine };
     socket_server.start_listening();

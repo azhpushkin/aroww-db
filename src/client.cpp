@@ -19,7 +19,6 @@ std::vector<std::string> split(std::string s) {
     std::string token;
     std::string delimeter = " ";
     while ((pos = s.find(delimeter)) != std::string::npos) {
-        token = s.substr(0, pos);
         vec.push_back(s.substr(0, pos));
         s.erase(0, pos + delimeter.length());
     }

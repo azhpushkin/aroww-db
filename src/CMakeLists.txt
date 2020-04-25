@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
 
+set(CMAKE_CXX_CLANG_TIDY 
+  clang-tidy;
+  -checks=*;)
+
 # Source files
 set(COMMON_SRCS engine/engine.cpp network/socket_server.cpp)
 set(SERVER_SRCS ${COMMON_SRCS} server.cpp)

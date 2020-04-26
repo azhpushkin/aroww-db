@@ -4,6 +4,8 @@
 #include <fstream>
 #include <map>
 #include <optional>
+#include <filesystem>
+
 
 class OpResult {
 public:
@@ -38,7 +40,7 @@ private:
     std::fstream file;
 
 public:
-    SingleFileLogEngine(std::string filename);
+    SingleFileLogEngine(std::filesystem::path path);
     OpResult get(std::string key);
     OpResult set(std::string key, std::string value);
     OpResult drop(std::string key);

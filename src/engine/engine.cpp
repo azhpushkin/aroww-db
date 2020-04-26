@@ -42,8 +42,9 @@ OpResult SimpleInMemoryEngine::drop(std::string key)
 
 // Append log engine
 
-SingleFileLogEngine::SingleFileLogEngine(std::string filename) {
-    file.open(filename, std::ios::in | std::ios::out | std::ios::app);
+SingleFileLogEngine::SingleFileLogEngine(std::filesystem::path path) {
+    std::filesystem::path file_path = path / "db.txt";
+    file.open(file_path.string(), std::ios::in | std::ios::out | std::ios::app);
 }
 
 

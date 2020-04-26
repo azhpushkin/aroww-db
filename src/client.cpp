@@ -1,18 +1,33 @@
 #include <iostream>
 
 #include <fmt/format.h>
+#include <cxxopts.hpp>
 
 #include "lib/aroww.hpp"
 #include "utils/client_utils.hpp"
 
 
-
-
-
-
-int main()
+int main(int argc, char* argv[])
 {
-	ArowwConnection conn{std::string("localhost"), std::string("3490")};
+    cxxopts::Options options("ArowwDB", "Simple key-value storage");
+    options.add_options()
+        // TODO process verbose keyword to show different spdlog
+        ("H,host", "Host", cxxopts::value<std::string>()->default_value("localhost"))
+        ("p,port", "Port", cxxopts::value<std::string>()->default_value("7333"))
+        ("h,help", "Show help message (you are reading it now)")
+        ;
+
+    auto result = options.parse(argc, argv);
+    if (result.count("help")) {
+        std::cout << options.help() << std::endl;
+        return 0;
+    }
+
+
+	ArowwConnection conn{
+        result["host"].as<std::string>(),
+        result["port"].as<std::string>()
+    };
 	
     Command com;
 	conn.open_conn();

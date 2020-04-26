@@ -4,6 +4,9 @@ cmake_minimum_required(VERSION 3.0)
 #   clang-tidy;
 #   -checks=*;)
 
+set(DIR_PATH ${CMAKE_BINARY_DIR})
+
+
 # Protobuf generation and configuration
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS commands.proto)
 
@@ -33,7 +36,11 @@ add_library(aroww-db-for-tests SHARED ${SOURCES})
 # Target to run server
 add_custom_target(serv DEPENDS aroww-server)
 set_target_properties(serv PROPERTIES EXCLUDE_FROM_ALL TRUE)
-add_custom_command(TARGET serv POST_BUILD COMMAND $<TARGET_FILE:aroww-server>)
+add_custom_command(
+    TARGET serv
+    POST_BUILD COMMAND
+    $<TARGET_FILE:aroww-server> --datadir ${DIR_PATH}
+)
 
 # Target to run client
 add_custom_target(cli DEPENDS aroww-client)

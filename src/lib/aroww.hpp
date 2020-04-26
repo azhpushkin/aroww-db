@@ -1,8 +1,7 @@
 #include "commands.pb.h"
 
-class ArowwResult
+struct ArowwResult
 {
-public:
     bool success;
     std::optional<std::string> value = std::nullopt;
     std::optional<std::string> error_msg = std::nullopt;

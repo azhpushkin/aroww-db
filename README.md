@@ -17,6 +17,7 @@ created for learning purposes only.
   ([LevelDB bench](http://www.lmdb.tech/bench/microbench/benchmark.html)
   and [Facebook db_bench](https://github.com/facebook/rocksdb/wiki/Benchmarking-tools)
   looks promising)
+- [ ] Still no namespace for some reason, need to add
 
 
 **Future plans on things to add:**

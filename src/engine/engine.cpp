@@ -4,17 +4,6 @@
 #include <stdexcept>
 #include <optional>
 
-bool operator==(const OpResult& lhs, const OpResult& rhs) {
-    return (
-        lhs.success == rhs.success
-        and lhs.error_msg == rhs.error_msg
-        and lhs.value == rhs.value
-    );
-}
-bool operator!=(const OpResult& lhs, const OpResult& rhs) {
-    return !(lhs==rhs);
-}
-
 
 // Append log engine
 

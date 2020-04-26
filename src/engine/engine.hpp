@@ -23,17 +23,6 @@ public:
     virtual OpResult drop(std::string key) = 0;
 };
 
-class SimpleInMemoryEngine : public AbstractEngine {
-private:
-    std::map<std::string, std::string> storage;
-
-public:
-    SimpleInMemoryEngine();
-    OpResult get(std::string key);
-    OpResult set(std::string key, std::string value);
-    OpResult drop(std::string key);
-};
-
 
 class SingleFileLogEngine : public AbstractEngine {
 private:

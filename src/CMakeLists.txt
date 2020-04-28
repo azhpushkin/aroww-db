@@ -11,9 +11,8 @@ set(DIR_PATH ${CMAKE_BINARY_DIR})
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS commands.proto)
 
 # Source files
+set(SERV_ONLY engine/engine.cpp network/socket_server.cpp)
 set(SOURCES
-    engine/engine.cpp
-    network/socket_server.cpp
     lib/aroww.cpp
     utils/client_utils.cpp
     ${PROTO_SRCS}
@@ -28,10 +27,10 @@ include_directories(PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 set(TESTABLE_HDR_INCLUDE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 
 # Executables and libs
-add_executable(aroww-server ${SOURCES} server.cpp)
+add_executable(aroww-server ${SOURCES} ${SERV_ONLY} server.cpp)
 add_executable(aroww-client ${SOURCES} client.cpp)
 add_library(aroww-db SHARED ${LIB_SOURCES})
-add_library(aroww-db-for-tests SHARED ${SOURCES})
+add_library(aroww-db-for-tests SHARED ${SOURCES} ${SERV_ONLY})
 
 # Target to run server
 add_custom_target(serv DEPENDS aroww-server)

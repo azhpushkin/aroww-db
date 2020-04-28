@@ -6,9 +6,9 @@ private:
 
     AbstractEngine& engine;
 
-    static void* start_connection_thread(void*);
+    static void start_connection_thread(SimpleSocketServer* server, int* socket);
 public:
     SimpleSocketServer(int, AbstractEngine&);
-    void start_listening();
+    int start_listening();
 
 };

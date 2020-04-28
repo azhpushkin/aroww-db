@@ -1,15 +1,9 @@
 #include <arpa/inet.h>
-#include <errno.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <pthread.h>
-#include <signal.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cerrno>
+#include <cstring>
 #include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
+
+#include <thread>
 
 #define SPDLOG_FMT_EXTERNAL 1
 #include "spdlog/spdlog.h"
@@ -23,28 +17,22 @@
 #define BACKLOG 10
 
 
-struct ThreadParams {
-    SimpleSocketServer* server;
-    int* socket;
-};
-
 SimpleSocketServer::SimpleSocketServer(int port_, AbstractEngine& engine_)
 : port(port_),
   engine(engine_)
 {}
 
 
-void SimpleSocketServer::start_listening()
+int SimpleSocketServer::start_listening()
 {
     int sockfd, new_fd; /* listen on sock_fd, new connection on new_fd */
     struct sockaddr_in my_addr; /* my address information */
     struct sockaddr_in their_addr; /* connector's address information */
     socklen_t sin_size;
-    pthread_t thread;
 
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
         perror("socket");
-        exit(1);
+        return 1;
     }
     int enable = 1;
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
@@ -57,15 +45,17 @@ void SimpleSocketServer::start_listening()
 
     if (bind(sockfd, (struct sockaddr*)&my_addr, sizeof(struct sockaddr)) == -1) {
         perror("bind");
-        exit(1);
+        return 1;
     }
 
     if (listen(sockfd, BACKLOG) == -1) {
         perror("listen");
-        exit(1);
+        return 1;
     }
 
     spdlog::info("Server started, listening on {}", port);
+
+    std::vector<std::thread> conn_threads;
 
     while (1) { /* main accept() loop */
         sin_size = sizeof(struct sockaddr_in);
@@ -74,18 +64,15 @@ void SimpleSocketServer::start_listening()
             continue;
         }
         spdlog::info("New connection from {}, binding to {}", inet_ntoa(their_addr.sin_addr), new_fd);
-        ThreadParams *params = new ThreadParams {this, &new_fd};
-        pthread_create(&thread, 0, SimpleSocketServer::start_connection_thread, (void*)params);
-        pthread_detach(thread);
+        conn_threads.emplace_back(SimpleSocketServer::start_connection_thread, this, &new_fd);
     }
 }
 
-void* SimpleSocketServer::start_connection_thread(void* params) {
+void SimpleSocketServer::start_connection_thread(SimpleSocketServer* server, int* socket_) {
     char buffer[512];
     std::string output;
     int result;
-    int socket = *((ThreadParams*)params)->socket;
-    SimpleSocketServer* server = ((ThreadParams*)params)->server;
+    int socket = *socket_;
 
     spdlog::info(">> {}: thread started", socket);
     while (1) {
@@ -138,5 +125,4 @@ void* SimpleSocketServer::start_connection_thread(void* params) {
     }
 
     close(socket);
-    pthread_exit(0);
 }

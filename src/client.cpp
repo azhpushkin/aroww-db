@@ -1,4 +1,6 @@
 #include <iostream>
+#include <csignal>
+#include <atomic>
 
 #include <fmt/format.h>
 #include <cxxopts.hpp>
@@ -6,6 +8,13 @@
 #include "lib/aroww.hpp"
 #include "utils/client_utils.hpp"
 
+volatile std::atomic_bool EXIT_SCHEDULED = false;
+
+void schedule_exit(int signal) {
+    // TODO: better way of finishing this;
+    if (signal == SIGINT)
+        EXIT_SCHEDULED = true;
+}
 
 int main(int argc, char* argv[])
 {
@@ -23,6 +32,7 @@ int main(int argc, char* argv[])
         return 0;
     }
 
+    std::signal(SIGINT, schedule_exit);
 
 	ArowwConnection conn{
         result["host"].as<std::string>(),
@@ -35,7 +45,12 @@ int main(int argc, char* argv[])
 
     while(true) {
         ArowwResult res;
-        com = get_command(std::cout, std::cin);
+        if (EXIT_SCHEDULED) {
+            break;
+        } else {
+            com = get_command(std::cout, std::cin);
+        }
+        
         
         if (com.name == "get") res = conn.get(com.args.at(0));
         else if (com.name == "drop") res = conn.drop(com.args.at(0));

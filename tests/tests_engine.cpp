@@ -1,6 +1,5 @@
 #include <filesystem>
 #include <fstream>
-#include <iostream>
 
 #include "catch2/catch.hpp"
 
@@ -28,7 +27,6 @@ protected:
 public:
     TempDirFixture() {
         temp_dir = std::filesystem::temp_directory_path() / ".arrow_test_tmp";
-        std::cout << temp_dir <<std::endl;
         std::filesystem::create_directory(temp_dir);
     }
     ~TempDirFixture() {
@@ -51,7 +49,6 @@ TEST_CASE_METHOD (TempDirFixture, "Log file contents" ) {
     std::string temp;
     std::ifstream file(temp_dir / "db.txt");
     while(std::getline(file, temp, '\n')) {
-        std::cout << temp <<std::endl;
         contents.push_back(temp);
     }
 

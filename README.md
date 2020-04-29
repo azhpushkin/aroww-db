@@ -24,7 +24,8 @@ created for learning purposes only.
 - [x] Static code analyzers [clang-tidy, cppcheck, clazy]
 - [x] Sourse code formatter [clang-format]
 - [ ] Documentation and docs generation [doxygen]
-- [ ] Package managers? [Conan, vcpkg]
+- [x] ~~Package managers? [Conan, vcpkg]~~ Okay, I see how bad things are with packaging in C++. 
+  Gonna leave this for better times.
 - [x] See if `fmt` lib is useful and add if needed
 - [x] Logging of event to gather metric [`spdlog` or what?] 
 - [x] Implementing some basic tests

@@ -3,15 +3,11 @@
 #include <cstring>
 #include <sys/socket.h>
 
-#include <thread>
-
 #define SPDLOG_FMT_EXTERNAL 1
 #include "spdlog/spdlog.h"
 
 #include "socket_server.hpp"
 #include "engine/engine.hpp"
-
-#include "commands.pb.h"
 
 
 #define BACKLOG 10
@@ -55,7 +51,7 @@ int SimpleSocketServer::start_listening()
 
     spdlog::info("Server started, listening on {}", port);
 
-    std::vector<std::thread> conn_threads;
+    std::vector<RunningConnection> connections;
 
     while (1) { /* main accept() loop */
         sin_size = sizeof(struct sockaddr_in);
@@ -64,65 +60,6 @@ int SimpleSocketServer::start_listening()
             continue;
         }
         spdlog::info("New connection from {}, binding to {}", inet_ntoa(their_addr.sin_addr), new_fd);
-        conn_threads.emplace_back(SimpleSocketServer::start_connection_thread, this, &new_fd);
+        connections.emplace_back(new_fd, engine);
     }
-}
-
-void SimpleSocketServer::start_connection_thread(SimpleSocketServer* server, int* socket_) {
-    char buffer[512];
-    std::string output;
-    int result;
-    int socket = *socket_;
-
-    spdlog::info(">> {}: thread started", socket);
-    while (1) {
-        memset(buffer, 0, 500);
-        result = recv(socket, buffer, 512, 0);
-        if (result == 0) {
-            spdlog::info(">> {}: connection closed", socket);
-            break;
-        }
-        if (result == -1) {
-            perror("Error receiving from connection!");
-            break;
-        }
-
-        DBCommand command;
-        
-        command.ParseFromString(std::string(buffer));
-        std::string type;
-        if (command.type() == 1) type = "GET";
-        if (command.type() == 2) type = "SET";
-        if (command.type() == 3) type = "DROP";
-        spdlog::info(">> {}: received command: {}(key={},value={})", socket, type, command.key(), command.value());
-
-        OpResult opres;
-        DBCommandResult result{};
-        if (command.type() == 1) {  // GET
-            opres = server->engine.get(command.key());
-            if (opres.success) {
-                result.set_type(ResultType::OK);
-                result.set_value(opres.value.value());
-            } else {
-                result.set_type(ResultType::KEY_MISSING);
-                result.set_error_msg(opres.error_msg.value());
-            }
-        }
-        if (command.type() == 2) {
-            opres = server->engine.set(command.key(), command.value());
-            result.set_type(ResultType::OK);
-        }
-        if (command.type() == 3) {
-            opres = server->engine.drop(command.key());
-            result.set_type(ResultType::OK);
-        }
-        
-        output.clear();
-        result.SerializeToString(&output);
-        spdlog::info(">> {}: Sending back: {}(key={},value={})", socket, result.type(), command.key(), command.value());
-
-        send(socket, output.c_str(), output.length(), 0);
-    }
-
-    close(socket);
 }

@@ -11,7 +11,11 @@ set(DIR_PATH ${CMAKE_BINARY_DIR})
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS commands.proto)
 
 # Source files
-set(SERV_ONLY engine/engine.cpp network/socket_server.cpp)
+set(SERV_ONLY
+    engine/engine.cpp
+    network/socket_server.cpp
+    network/connection.cpp
+)
 set(SOURCES
     lib/aroww.cpp
     utils/client_utils.cpp

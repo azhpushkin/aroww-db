@@ -1,4 +1,18 @@
+#include <thread>
+
 #include "engine/engine.hpp"
+
+
+class RunningConnection {
+private:
+    int socket;
+    AbstractEngine& engine;
+    std::thread th;
+
+    void start();
+public:
+    RunningConnection(int, AbstractEngine&);
+};
 
 class SimpleSocketServer {
 private:

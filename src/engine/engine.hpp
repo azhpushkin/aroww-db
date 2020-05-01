@@ -25,6 +25,7 @@ public:
 class SingleFileLogEngine : public AbstractEngine {
 private:
     std::fstream file;
+    std::map<std::string, std::streampos> cache;
 
 public:
     SingleFileLogEngine(std::filesystem::path path);

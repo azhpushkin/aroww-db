@@ -19,7 +19,12 @@ OpResult SingleFileLogEngine::get(std::string key)
     std::string t;
     std::optional<std::string> res = std::nullopt;
     file.clear();
-    file.seekg(0, file.beg);
+    if (cache.find(key) != cache.end()) {
+        file.seekg(cache.at(key), file.beg);
+    } else {
+        file.seekg(0, file.beg);
+    }
+    
     
     while (std::getline( file, t )) {
         
@@ -40,6 +45,7 @@ OpResult SingleFileLogEngine::set(std::string key, std::string value)
 {
     file.clear();
     file.seekp(0, file.end);
+    cache[key] = file.tellp();
     file << key << "\v" << value << '\n';
     file.flush();
     return OpResult {true, std::nullopt, std::nullopt};
@@ -49,6 +55,7 @@ OpResult SingleFileLogEngine::drop(std::string key)
 {
     file.clear();
     file.seekp(0, file.end);
+    cache[key] = file.tellp();
     file << key << "\v" << std::endl;
     file.flush();
     return OpResult {true, std::nullopt, std::nullopt};

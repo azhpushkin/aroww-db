@@ -96,3 +96,22 @@ TEST_CASE_METHOD (TempDirFixture, "Functional test" ) {
     REQUIRE( engine.get("111") == OpResult{false, std::nullopt, "Key missing"});
     REQUIRE( engine.get("222") == OpResult{true, "other", std::nullopt});
 }
+
+
+TEST_CASE_METHOD (TempDirFixture, "Init from file" ) {    
+    std::ofstream file(temp_dir / "db.txt");
+
+    file << "key1\vFirst" << std::endl;
+    file << "key2\vSecond" << std::endl;
+    file << "key1\v" << std::endl;
+    file << "key3\v" << std::endl;
+    file << "key2\vSecond_v2" << std::endl;
+    file << "key3\vTHIRD" << std::endl;
+    
+
+    SingleFileLogEngine engine(temp_dir);
+    REQUIRE( engine.get("key1") == OpResult{false, std::nullopt, "Key missing"});
+    REQUIRE( engine.get("key2") == OpResult{true, "Second_v2", std::nullopt});
+    REQUIRE( engine.get("key3") == OpResult{true, "THIRD", std::nullopt});
+
+}

@@ -42,31 +42,31 @@ public:
 };
 
 
-TEST_CASE_METHOD (TempDirFixture, "Log file contents" ) {
-    SingleFileLogEngine engine(temp_dir);
+// TEST_CASE_METHOD (TempDirFixture, "Log file contents" ) {
+//     SingleFileLogEngine engine(temp_dir);
 
-    engine.set("key1", "First");
-    engine.set("key2", "Second");
-    engine.drop("key1");
-    engine.drop("key3");
-    engine.set("key2", "Second_v2");
-    engine.set("key3", "THIRD");
+//     engine.set("key1", "First");
+//     engine.set("key2", "Second");
+//     engine.drop("key1");
+//     engine.drop("key3");
+//     engine.set("key2", "Second_v2");
+//     engine.set("key3", "THIRD");
 
-    std::vector<std::string> contents;
-    std::string temp;
-    std::ifstream file(temp_dir / "db.txt");
-    while(std::getline(file, temp, '\n')) {
-        contents.push_back(temp);
-    }
+//     std::vector<std::string> contents;
+//     std::string temp;
+//     std::ifstream file(temp_dir / "db.txt");
+//     while(std::getline(file, temp, '\n')) {
+//         contents.push_back(temp);
+//     }
 
-    REQUIRE(contents.size() == 6);
-    REQUIRE(contents.at(0) == "key1\vFirst");
-    REQUIRE(contents.at(1) == "key2\vSecond");
-    REQUIRE(contents.at(2) == "key1\v");
-    REQUIRE(contents.at(3) == "key3\v");
-    REQUIRE(contents.at(4) == "key2\vSecond_v2");
-    REQUIRE(contents.at(5) == "key3\vTHIRD");
-}
+//     REQUIRE(contents.size() == 6);
+//     REQUIRE(contents.at(0) == "key1\vFirst");
+//     REQUIRE(contents.at(1) == "key2\vSecond");
+//     REQUIRE(contents.at(2) == "key1\v");
+//     REQUIRE(contents.at(3) == "key3\v");
+//     REQUIRE(contents.at(4) == "key2\vSecond_v2");
+//     REQUIRE(contents.at(5) == "key3\vTHIRD");
+// }
 
 
 TEST_CASE_METHOD (TempDirFixture, "Functional test" ) {

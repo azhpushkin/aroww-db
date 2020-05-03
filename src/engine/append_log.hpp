@@ -5,19 +5,25 @@
 #include <map>
 #include <memory>
 #include <utility>
+#include <list>
 
 #include "engine.hpp"
 
 
 namespace fs = std::filesystem;
 
-struct SegmentFile {
-    fs::path path;
-    int number;
-    bool compressed = false;
-    std::streampos length = 0;
+class AppendLogEngine;
 
-    SegmentFile(fs::path p_, int n_, bool c_) : path(p_), number(n_), compressed(c_) {};
+class SegmentFile {
+public:
+    int number;
+    bool compressed;
+    int length = 0;
+
+    SegmentFile(int n_, bool c_) : number(n_), compressed(c_) {};
+
+    fs::path get_path(AppendLogEngine*);
+    static std::optional<SegmentFile> parse_path(fs::path);
 };
 
 typedef std::pair<std::shared_ptr<SegmentFile>, std::streampos> KeyPosition;
@@ -39,11 +45,16 @@ public:
     OpResult drop(std::string key);
 private:
     AppendLogConfiguration conf;
-    std::vector<std::shared_ptr<SegmentFile>> segments;
+    fs::path data_dir;
+    
+    std::list<std::shared_ptr<SegmentFile>> segments;
 
-    std::fstream current;
+    std::fstream write_file;
     std::map<std::string, KeyPosition> cache;
-
+    
     void load_segment(std::shared_ptr<SegmentFile> segment);
+    void switch_to_new_segment();
+
+    friend class SegmentFile;
 };
 

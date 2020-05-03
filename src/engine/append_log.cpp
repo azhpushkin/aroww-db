@@ -25,9 +25,28 @@ struct SegmentsComparator
   }
 };
 
+fs::path SegmentFile::get_path(AppendLogEngine* engine) {
+    return engine->data_dir / fmt::format("db_{0}{1}.txt", number, compressed?"_compressed":"");
+}
+
+std::optional<SegmentFile> SegmentFile::parse_path(fs::path path) {
+    std::regex rx(".*db_([0-9]+)(_compressed)?.txt");
+    std::smatch match;
+    std::string temp = path.string();
+        
+    if(!std::regex_match(temp, match, rx)) {
+        return std::nullopt;
+    }
+
+    // Regex guarantees that match will work fine
+    int number = std::stoi(match[1].str());
+    bool compressed = (match[2].str().length() != 0);
+    return SegmentFile{number, compressed};
+}
+
 
 void AppendLogEngine::load_segment(std::shared_ptr<SegmentFile> segment) {
-    std::fstream segment_file(segment->path, std::ios::in);
+    std::fstream segment_file(segment->get_path(this), std::ios::in);
 
     std::string t, key;
     auto file_pos = segment_file.tellg();
@@ -41,58 +60,36 @@ void AppendLogEngine::load_segment(std::shared_ptr<SegmentFile> segment) {
 }
 
 AppendLogEngine::AppendLogEngine(AppendLogConfiguration conf_): conf(conf_) {
-    fs::path dir = conf.dir_path / DATA_SUBDIR;
+    data_dir = conf.dir_path / DATA_SUBDIR;
 
-    if (!fs::exists(dir)) {
-        fs::create_directory(dir);
+    if (!fs::exists(data_dir)) {
+        fs::create_directory(data_dir);
     } 
     
-    std::string segment_number;
-    std::regex rx(".*db_([0-9]+)(_compressed)?.txt");
-    for(auto& p: fs::directory_iterator(dir)) {
-        std::smatch match;
-        std::string temp = p.path().string();
-        
-        if(!std::regex_match(temp, match, rx)) {
-            continue;
+    for(auto& p: fs::directory_iterator(data_dir)) {
+        auto segment = SegmentFile::parse_path(p.path());
+        if (segment.has_value()) {
+            segments.push_back(std::make_shared<SegmentFile>(segment.value()));
         }
-
-        std::shared_ptr<SegmentFile> segment = std::make_shared<SegmentFile>(
-            p.path(),
-            std::stoi(match[1].str()),
-            (match[2].str().length() != 0)
-        );
-        segments.push_back(segment);
     }
 
-    std::sort(segments.begin(), segments.end(), SegmentsComparator());
+    segments.sort(SegmentsComparator());
 
     for (auto& seg: segments) {
         load_segment(seg);
     }
     
     if (segments.size() > 0) {    
-        auto last =  segments.back();
-        
+        auto last =  segments.back();      
         if (last->length > (conf.max_segment_size / 2)) {
-            std::shared_ptr<SegmentFile> segment = std::make_shared<SegmentFile>(
-                dir / fmt::format("db_{0}.txt", last->number + 1),
-                last->number+1,
-                false
-            );
-            segments.push_back(segment);
+            segments.push_back(std::make_shared<SegmentFile>(last->number+1, false));
         }
     } else {
-        std::shared_ptr<SegmentFile> segment = std::make_shared<SegmentFile>(
-            dir / "db_1.txt",
-            1,
-            false
-        );
-        segments.push_back(segment);
+        segments.push_back(std::make_shared<SegmentFile>(1, false));
     }
 
 
-    current.open(segments.back()->path, std::ios::app | std::ios::in);
+    write_file.open(segments.back()->get_path(this), std::ios::app | std::ios::in);
 }
 
 
@@ -104,12 +101,12 @@ OpResult AppendLogEngine::get(std::string key)
         return OpResult {false, std::nullopt, "Key missing"};
     }
     auto pair = cache.at(key);
-    if (pair.first->path == segments.back()->path ) {
-        current.seekg(pair.second, current.beg);
-        std::getline( current, t );
+    if (pair.first->number == segments.back()->number ) {
+        write_file.seekg(pair.second, write_file.beg);
+        std::getline( write_file, t );
     } else {
         
-        std::fstream segment_file(pair.first->path, std::ios::in);
+        std::fstream segment_file(pair.first->get_path(this), std::ios::in);
         segment_file.seekg(pair.second, segment_file.beg);
         std::getline( segment_file, t );
     }
@@ -125,16 +122,29 @@ OpResult AppendLogEngine::get(std::string key)
 
 OpResult AppendLogEngine::set(std::string key, std::string value)
 {
-    cache[key] = std::make_pair(segments.back(), current.tellp());
-    current << key << "\v" << value << '\n';
-    current.flush();
+    cache[key] = std::make_pair(segments.back(), write_file.tellp());
+    write_file << key << "\v" << value << std::endl;
+    segments.back()->length = write_file.tellp();
+    switch_to_new_segment();
     return OpResult {true, std::nullopt, std::nullopt};
 }
 
 OpResult AppendLogEngine::drop(std::string key)
 {
-    cache[key] = std::make_pair(segments.back(), current.tellp());
-    current << key << "\v" << std::endl;
-    current.flush();
+    cache[key] = std::make_pair(segments.back(), write_file.tellp());
+    write_file << key << "\v" << std::endl;
+    segments.back()->length = write_file.tellp();
+    switch_to_new_segment();
     return OpResult {true, std::nullopt, std::nullopt};
+}
+
+
+void AppendLogEngine::switch_to_new_segment() {
+    if (segments.back()->length < conf.max_segment_size) {
+        return;
+    }
+
+    write_file.close();
+    segments.push_back(std::make_shared<SegmentFile>(segments.back()->number+1, false));
+    write_file.open(segments.back()->get_path(this), std::ios::app | std::ios::in);
 }

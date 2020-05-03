@@ -1,9 +1,10 @@
+#include <iostream>
 #include <filesystem>
 #include <fstream>
 
 #include "catch2/catch.hpp"
 
-#include "engine/engine.hpp"
+#include "engine/append_log.hpp"
 
 bool operator==(const OpResult& lhs, const OpResult& rhs) {
     return (
@@ -34,6 +35,9 @@ protected:
 public:
     TempDirFixture() {
         temp_dir = std::filesystem::temp_directory_path() / ".arrow_test_tmp";
+        if (std::filesystem::exists(temp_dir)) {
+            std::filesystem::remove_all(temp_dir);
+        }
         std::filesystem::create_directory(temp_dir);
     }
     ~TempDirFixture() {
@@ -42,31 +46,31 @@ public:
 };
 
 
-// TEST_CASE_METHOD (TempDirFixture, "Log file contents" ) {
-//     SingleFileLogEngine engine(temp_dir);
+TEST_CASE_METHOD (TempDirFixture, "Log file contents" ) {
+    SingleFileLogEngine engine(temp_dir);
 
-//     engine.set("key1", "First");
-//     engine.set("key2", "Second");
-//     engine.drop("key1");
-//     engine.drop("key3");
-//     engine.set("key2", "Second_v2");
-//     engine.set("key3", "THIRD");
+    engine.set("key1", "First");
+    engine.set("key2", "Second");
+    engine.drop("key1");
+    engine.drop("key3");
+    engine.set("key2", "Second_v2");
+    engine.set("key3", "THIRD");
 
-//     std::vector<std::string> contents;
-//     std::string temp;
-//     std::ifstream file(temp_dir / "db.txt");
-//     while(std::getline(file, temp, '\n')) {
-//         contents.push_back(temp);
-//     }
+    std::vector<std::string> contents;
+    std::string temp;
+    std::ifstream file(temp_dir / "aroww-db" / "db_1.txt");
+    while(std::getline(file, temp, '\n')) {
+        contents.push_back(temp);
+    }
 
-//     REQUIRE(contents.size() == 6);
-//     REQUIRE(contents.at(0) == "key1\vFirst");
-//     REQUIRE(contents.at(1) == "key2\vSecond");
-//     REQUIRE(contents.at(2) == "key1\v");
-//     REQUIRE(contents.at(3) == "key3\v");
-//     REQUIRE(contents.at(4) == "key2\vSecond_v2");
-//     REQUIRE(contents.at(5) == "key3\vTHIRD");
-// }
+    REQUIRE(contents.size() == 6);
+    REQUIRE(contents.at(0) == "key1\vFirst");
+    REQUIRE(contents.at(1) == "key2\vSecond");
+    REQUIRE(contents.at(2) == "key1\v");
+    REQUIRE(contents.at(3) == "key3\v");
+    REQUIRE(contents.at(4) == "key2\vSecond_v2");
+    REQUIRE(contents.at(5) == "key3\vTHIRD");
+}
 
 
 TEST_CASE_METHOD (TempDirFixture, "Functional test" ) {
@@ -99,19 +103,23 @@ TEST_CASE_METHOD (TempDirFixture, "Functional test" ) {
 
 
 TEST_CASE_METHOD (TempDirFixture, "Init from file" ) {    
-    std::ofstream file(temp_dir / "db.txt");
+    std::filesystem::create_directory(temp_dir / "aroww-db");
+    std::ofstream file1(temp_dir / "aroww-db" / "db_1.txt");
 
-    file << "key1\vFirst" << std::endl;
-    file << "key2\vSecond" << std::endl;
-    file << "key1\v" << std::endl;
-    file << "key3\v" << std::endl;
-    file << "key2\vSecond_v2" << std::endl;
-    file << "key3\vTHIRD" << std::endl;
+    file1 << "key1\vFirst" << std::endl;
+    file1 << "key2\vSecond" << std::endl;
+    file1 << "key1\v" << std::endl;
+    file1.close();
     
+    
+    std::ofstream file2(temp_dir / "aroww-db" / "db_1.txt");
+    file2 << "key3\v" << std::endl;
+    file2 << "key2\vSecond_v2" << std::endl;
+    file2 << "key3\vTHIRD" << std::endl;
+    file2.close();
 
     SingleFileLogEngine engine(temp_dir);
     REQUIRE( engine.get("key1") == OpResult{false, std::nullopt, "Key missing"});
     REQUIRE( engine.get("key2") == OpResult{true, "Second_v2", std::nullopt});
     REQUIRE( engine.get("key3") == OpResult{true, "THIRD", std::nullopt});
-
 }

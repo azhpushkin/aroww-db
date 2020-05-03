@@ -4,30 +4,41 @@
 #include <optional>
 #include <algorithm>
 #include <regex>
+#include <filesystem>
+#include <fstream>
 
 #include <fmt/format.h>
 
-#include "engine.hpp"
+#include "append_log.hpp"
+
+
+namespace fs = std::filesystem;
 
 
 // TODO: we can make this a struct, default one
 #define SWITCH_AFTER 100 // small for test only
 
-namespace fs = std::filesystem;
+struct SegmentsComparator
+{
+  bool operator() (std::shared_ptr<SegmentFile> &lhs, std::shared_ptr<SegmentFile> &rhs)
+  {
+    return lhs->number < rhs->number;
+  }
+};
 
 
-void SingleFileLogEngine::load_segment(SegmentFile& segment) {
-    std::fstream segment_file(segment.path, std::ios::in);
+void SingleFileLogEngine::load_segment(std::shared_ptr<SegmentFile> segment) {
+    std::fstream segment_file(segment->path, std::ios::in);
 
     std::string t, key;
     auto file_pos = segment_file.tellg();
     while (std::getline( segment_file, t )) {
         size_t t_pos = t.find("\v");
         key = t.substr(0, t_pos);
-        cache[key] = std::make_pair(&segment, file_pos);
+        cache[key] = std::make_pair(segment, file_pos);
         file_pos = segment_file.tellg();
     }
-    segment.length = file_pos;
+    segment->length = file_pos;
 }
 
 SingleFileLogEngine::SingleFileLogEngine(fs::path path) {
@@ -47,42 +58,42 @@ SingleFileLogEngine::SingleFileLogEngine(fs::path path) {
             continue;
         }
 
-        segments.emplace_back(
+        std::shared_ptr<SegmentFile> segment = std::make_shared<SegmentFile>(
             p.path(),
             std::stoi(match[1].str()),
             (match[2].str().length() != 0)
         );
+        segments.push_back(segment);
     }
 
-    std::sort(
-        segments.begin(), segments.end(),
-        [](SegmentFile& a, SegmentFile& b) {return a.number < b.number;}
-    );
+    std::sort(segments.begin(), segments.end(), SegmentsComparator());
 
     for (auto& seg: segments) {
         load_segment(seg);
     }
     
     if (segments.size() > 0) {    
-        SegmentFile last =  segments.back();
+        auto last =  segments.back();
         
-        if (last.length > (SWITCH_AFTER / 2)) {
-            segments.emplace_back(
-                dir / fmt::format("db_{0}.txt", last.number + 1),
-                last.number+1,
+        if (last->length > (SWITCH_AFTER / 2)) {
+            std::shared_ptr<SegmentFile> segment = std::make_shared<SegmentFile>(
+                dir / fmt::format("db_{0}.txt", last->number + 1),
+                last->number+1,
                 false
             );
+            segments.push_back(segment);
         }
     } else {
-        segments.emplace_back(
+        std::shared_ptr<SegmentFile> segment = std::make_shared<SegmentFile>(
             dir / "db_1.txt",
             1,
             false
         );
+        segments.push_back(segment);
     }
 
 
-    current.open(segments.back().path, std::ios::app | std::ios::in);
+    current.open(segments.back()->path, std::ios::app | std::ios::in);
 }
 
 
@@ -94,10 +105,11 @@ OpResult SingleFileLogEngine::get(std::string key)
         return OpResult {false, std::nullopt, "Key missing"};
     }
     auto pair = cache.at(key);
-    if (pair.first->path == segments.back().path ) {
+    if (pair.first->path == segments.back()->path ) {
         current.seekg(pair.second, current.beg);
         std::getline( current, t );
     } else {
+        
         std::fstream segment_file(pair.first->path, std::ios::in);
         segment_file.seekg(pair.second, segment_file.beg);
         std::getline( segment_file, t );
@@ -114,7 +126,7 @@ OpResult SingleFileLogEngine::get(std::string key)
 
 OpResult SingleFileLogEngine::set(std::string key, std::string value)
 {
-    cache[key] = std::make_pair(&segments.back(), current.tellp());
+    cache[key] = std::make_pair(segments.back(), current.tellp());
     current << key << "\v" << value << '\n';
     current.flush();
     return OpResult {true, std::nullopt, std::nullopt};
@@ -122,7 +134,7 @@ OpResult SingleFileLogEngine::set(std::string key, std::string value)
 
 OpResult SingleFileLogEngine::drop(std::string key)
 {
-    cache[key] = std::make_pair(&segments.back(), current.tellp());
+    cache[key] = std::make_pair(segments.back(), current.tellp());
     current << key << "\v" << std::endl;
     current.flush();
     return OpResult {true, std::nullopt, std::nullopt};

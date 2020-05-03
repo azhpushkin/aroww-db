@@ -12,7 +12,7 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS commands.proto)
 
 # Source files
 set(SERV_ONLY
-    engine/engine.cpp
+    engine/append_log.cpp
     network/socket_server.cpp
     network/connection.cpp
 )

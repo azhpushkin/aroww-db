@@ -3,7 +3,7 @@
 
 #include <cxxopts.hpp>
 
-#include "engine/engine.hpp"
+#include "engine/append_log.hpp"
 #include "network/socket_server.hpp"
 
 

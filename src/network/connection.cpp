@@ -7,7 +7,7 @@
 #include "spdlog/spdlog.h"
 
 #include "socket_server.hpp"
-#include "engine/engine.hpp"
+#include "engine/interface.hpp"
 
 #include "commands.pb.h"
 

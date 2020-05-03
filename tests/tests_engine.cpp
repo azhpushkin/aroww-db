@@ -4,7 +4,7 @@
 
 #include "catch2/catch.hpp"
 
-#include "engine/append_log.hpp"
+#include "engine/engine.hpp"
 
 bool operator==(const OpResult& lhs, const OpResult& rhs) {
     return (
@@ -47,7 +47,7 @@ public:
 
 
 TEST_CASE_METHOD (TempDirFixture, "Log file contents" ) {
-    AppendLogEngine engine(AppendLogConfiguration(temp_dir, 1000));
+    DBEngine engine(EngineConfiguration(temp_dir, 1000));
 
     engine.set("key1", "First");
     engine.set("key2", "Second");
@@ -74,7 +74,7 @@ TEST_CASE_METHOD (TempDirFixture, "Log file contents" ) {
 
 
 TEST_CASE_METHOD (TempDirFixture, "Functional test" ) {
-    AppendLogEngine engine(AppendLogConfiguration(temp_dir, 1000));
+    DBEngine engine(EngineConfiguration(temp_dir, 1000));
 
     // Simple set and re-set
     REQUIRE( engine.get("111") == OpResult{false, std::nullopt, "Key missing"});
@@ -118,7 +118,7 @@ TEST_CASE_METHOD (TempDirFixture, "Init from file" ) {
     file2 << "key3\vTHIRD" << std::endl;
     file2.close();
 
-    AppendLogEngine engine(AppendLogConfiguration(temp_dir, 1000));
+    DBEngine engine(EngineConfiguration(temp_dir, 1000));
     REQUIRE( engine.get("key1") == OpResult{false, std::nullopt, "Key missing"});
     REQUIRE( engine.get("key2") == OpResult{true, "Second_v2", std::nullopt});
     REQUIRE( engine.get("key3") == OpResult{true, "THIRD", std::nullopt});

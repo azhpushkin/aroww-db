@@ -3,7 +3,7 @@
 
 #include <cxxopts.hpp>
 
-#include "engine/append_log.hpp"
+#include "engine/engine.hpp"
 #include "network/socket_server.hpp"
 
 
@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
     
     
     // small max size for test purposes
-    AppendLogEngine engine{AppendLogConfiguration(path, 100)};
+    DBEngine engine{EngineConfiguration(path, 100)};
 
     SimpleSocketServer socket_server { result["port"].as<int>(), engine };
     socket_server.start_listening();

@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
     
     
 
-    SingleFileLogEngine engine{path};
+    AppendLogEngine engine{path};
 
     SimpleSocketServer socket_server { result["port"].as<int>(), engine };
     socket_server.start_listening();

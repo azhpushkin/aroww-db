@@ -23,9 +23,9 @@ struct SegmentFile {
 typedef std::pair<std::shared_ptr<SegmentFile>, std::streampos> KeyPosition;
 
 
-class SingleFileLogEngine : public AbstractEngine {
+class AppendLogEngine : public AbstractEngine {
 public:
-    SingleFileLogEngine(fs::path path);
+    AppendLogEngine(fs::path path);
     OpResult get(std::string key);
     OpResult set(std::string key, std::string value);
     OpResult drop(std::string key);

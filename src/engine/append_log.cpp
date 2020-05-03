@@ -27,7 +27,7 @@ struct SegmentsComparator
 };
 
 
-void SingleFileLogEngine::load_segment(std::shared_ptr<SegmentFile> segment) {
+void AppendLogEngine::load_segment(std::shared_ptr<SegmentFile> segment) {
     std::fstream segment_file(segment->path, std::ios::in);
 
     std::string t, key;
@@ -41,7 +41,7 @@ void SingleFileLogEngine::load_segment(std::shared_ptr<SegmentFile> segment) {
     segment->length = file_pos;
 }
 
-SingleFileLogEngine::SingleFileLogEngine(fs::path path) {
+AppendLogEngine::AppendLogEngine(fs::path path) {
     fs::path dir = path / "aroww-db";
 
     if (!fs::exists(dir)) {
@@ -97,7 +97,7 @@ SingleFileLogEngine::SingleFileLogEngine(fs::path path) {
 }
 
 
-OpResult SingleFileLogEngine::get(std::string key)
+OpResult AppendLogEngine::get(std::string key)
 {   
     std::string s;
     std::string t;
@@ -124,7 +124,7 @@ OpResult SingleFileLogEngine::get(std::string key)
     }
 }
 
-OpResult SingleFileLogEngine::set(std::string key, std::string value)
+OpResult AppendLogEngine::set(std::string key, std::string value)
 {
     cache[key] = std::make_pair(segments.back(), current.tellp());
     current << key << "\v" << value << '\n';
@@ -132,7 +132,7 @@ OpResult SingleFileLogEngine::set(std::string key, std::string value)
     return OpResult {true, std::nullopt, std::nullopt};
 }
 
-OpResult SingleFileLogEngine::drop(std::string key)
+OpResult AppendLogEngine::drop(std::string key)
 {
     cache[key] = std::make_pair(segments.back(), current.tellp());
     current << key << "\v" << std::endl;

@@ -6,6 +6,7 @@
 #include <regex>
 #include <filesystem>
 #include <fstream>
+#include <mutex>
 
 #include <fmt/format.h>
 
@@ -16,6 +17,7 @@ namespace fs = std::filesystem;
 
 
 #define DATA_SUBDIR "aroww-db"
+#define COMPRESS_AMOUNT 3
 
 struct SegmentsComparator
 {
@@ -45,7 +47,7 @@ std::optional<SegmentFile> SegmentFile::parse_path(fs::path path) {
 }
 
 
-void AppendLogEngine::load_segment(std::shared_ptr<SegmentFile> segment) {
+int AppendLogEngine::load_segment(std::shared_ptr<SegmentFile> segment) {
     std::fstream segment_file(segment->get_path(this), std::ios::in);
 
     std::string t, key;
@@ -56,7 +58,7 @@ void AppendLogEngine::load_segment(std::shared_ptr<SegmentFile> segment) {
         cache[key] = std::make_pair(segment, file_pos);
         file_pos = segment_file.tellg();
     }
-    segment->length = file_pos;
+    return file_pos;
 }
 
 AppendLogEngine::AppendLogEngine(AppendLogConfiguration conf_): conf(conf_) {
@@ -75,14 +77,14 @@ AppendLogEngine::AppendLogEngine(AppendLogConfiguration conf_): conf(conf_) {
 
     segments.sort(SegmentsComparator());
 
+    int last_pos = 0;
     for (auto& seg: segments) {
-        load_segment(seg);
+        last_pos = load_segment(seg);
     }
     
     if (segments.size() > 0) {    
-        auto last =  segments.back();      
-        if (last->length > (conf.max_segment_size / 2)) {
-            segments.push_back(std::make_shared<SegmentFile>(last->number+1, false));
+        if (last_pos >= conf.max_segment_size) {
+            segments.push_back(std::make_shared<SegmentFile>(segments.back()->number+1, false));
         }
     } else {
         segments.push_back(std::make_shared<SegmentFile>(1, false));
@@ -122,29 +124,69 @@ OpResult AppendLogEngine::get(std::string key)
 
 OpResult AppendLogEngine::set(std::string key, std::string value)
 {
+    std::lock_guard<std::mutex> guard(write_file_mutex);
     cache[key] = std::make_pair(segments.back(), write_file.tellp());
     write_file << key << "\v" << value << std::endl;
-    segments.back()->length = write_file.tellp();
-    switch_to_new_segment();
+    switch_to_new_segment(write_file.tellp());
     return OpResult {true, std::nullopt, std::nullopt};
 }
 
 OpResult AppendLogEngine::drop(std::string key)
 {
+    std::lock_guard<std::mutex> guard(write_file_mutex);
     cache[key] = std::make_pair(segments.back(), write_file.tellp());
     write_file << key << "\v" << std::endl;
-    segments.back()->length = write_file.tellp();
-    switch_to_new_segment();
+    switch_to_new_segment( write_file.tellp());
     return OpResult {true, std::nullopt, std::nullopt};
 }
 
 
-void AppendLogEngine::switch_to_new_segment() {
-    if (segments.back()->length < conf.max_segment_size) {
+void AppendLogEngine::switch_to_new_segment(int write_pos) {
+    if (write_pos < conf.max_segment_size) {
         return;
     }
 
-    write_file.close();
+    // Compress if needed
+    std::vector<std::shared_ptr<SegmentFile>> to_compress;
+    for(auto s: segments) {
+        if (!s->compressed) {
+            to_compress.push_back(s);
+        }
+    }
     segments.push_back(std::make_shared<SegmentFile>(segments.back()->number+1, false));
+    write_file.close();
+    if (to_compress.size() < COMPRESS_AMOUNT) // Threshold
+    {
+        write_file.open(segments.back()->get_path(this), std::ios::app | std::ios::in);
+        return;
+    }
+
+    auto compressed = std::make_shared<SegmentFile>(to_compress.back()->number, true);
+    std::fstream compressed_df(compressed->get_path(this), std::ios::app);
+
+    
+    std::map<std::string, std::string> values;
+    for(auto s: to_compress) {
+        std::fstream segment_file(s->get_path(this), std::ios::in);
+
+        std::string t, key, val;
+        while (std::getline( segment_file, t )) {
+            size_t t_pos = t.find("\v");
+            key = t.substr(0, t_pos);
+            val = t.substr(t_pos+1, t.length());
+            values[key] = val;
+        }
+        segments.remove(s);
+        segment_file.close();
+        fs::remove(s->get_path(this));
+    }
+
+    for (auto pair: values) {
+        auto pos = compressed_df.tellp();
+        compressed_df << pair.first << "\v" << pair.second << std::endl;
+        cache[pair.first] = std::make_pair(compressed, pos);
+    }
+
+    segments.insert((++segments.rbegin()).base(), compressed);
     write_file.open(segments.back()->get_path(this), std::ios::app | std::ios::in);
 }

@@ -6,6 +6,7 @@
 #include <memory>
 #include <utility>
 #include <list>
+#include <mutex>
 
 #include "engine.hpp"
 
@@ -18,7 +19,6 @@ class SegmentFile {
 public:
     int number;
     bool compressed;
-    int length = 0;
 
     SegmentFile(int n_, bool c_) : number(n_), compressed(c_) {};
 
@@ -49,11 +49,13 @@ private:
     
     std::list<std::shared_ptr<SegmentFile>> segments;
 
+    std::mutex write_file_mutex;
     std::fstream write_file;
+    
     std::map<std::string, KeyPosition> cache;
     
-    void load_segment(std::shared_ptr<SegmentFile> segment);
-    void switch_to_new_segment();
+    int load_segment(std::shared_ptr<SegmentFile> segment);
+    void switch_to_new_segment(int);
 
     friend class SegmentFile;
 };

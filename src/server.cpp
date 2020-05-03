@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
     
     
     // small max size for test purposes
-    AppendLogEngine engine{AppendLogConfiguration(path, 1000)};
+    AppendLogEngine engine{AppendLogConfiguration(path, 100)};
 
     SimpleSocketServer socket_server { result["port"].as<int>(), engine };
     socket_server.start_listening();

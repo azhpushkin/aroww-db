@@ -15,8 +15,7 @@
 namespace fs = std::filesystem;
 
 
-// TODO: we can make this a struct, default one
-#define SWITCH_AFTER 100 // small for test only
+#define DATA_SUBDIR "aroww-db"
 
 struct SegmentsComparator
 {
@@ -41,8 +40,8 @@ void AppendLogEngine::load_segment(std::shared_ptr<SegmentFile> segment) {
     segment->length = file_pos;
 }
 
-AppendLogEngine::AppendLogEngine(fs::path path) {
-    fs::path dir = path / "aroww-db";
+AppendLogEngine::AppendLogEngine(AppendLogConfiguration conf_): conf(conf_) {
+    fs::path dir = conf.dir_path / DATA_SUBDIR;
 
     if (!fs::exists(dir)) {
         fs::create_directory(dir);
@@ -75,7 +74,7 @@ AppendLogEngine::AppendLogEngine(fs::path path) {
     if (segments.size() > 0) {    
         auto last =  segments.back();
         
-        if (last->length > (SWITCH_AFTER / 2)) {
+        if (last->length > (conf.max_segment_size / 2)) {
             std::shared_ptr<SegmentFile> segment = std::make_shared<SegmentFile>(
                 dir / fmt::format("db_{0}.txt", last->number + 1),
                 last->number+1,

@@ -23,14 +23,22 @@ struct SegmentFile {
 typedef std::pair<std::shared_ptr<SegmentFile>, std::streampos> KeyPosition;
 
 
+class AppendLogConfiguration {
+public:
+    fs::path dir_path;
+    int max_segment_size;
+    AppendLogConfiguration(fs::path p_, int m_): dir_path(p_), max_segment_size(m_) {};
+};
+
+
 class AppendLogEngine : public AbstractEngine {
 public:
-    AppendLogEngine(fs::path path);
+    AppendLogEngine(AppendLogConfiguration conf);
     OpResult get(std::string key);
     OpResult set(std::string key, std::string value);
     OpResult drop(std::string key);
 private:
-    fs::path dir;
+    AppendLogConfiguration conf;
     std::vector<std::shared_ptr<SegmentFile>> segments;
 
     std::fstream current;

@@ -35,8 +35,9 @@ Segment::Segment(std::int64_t s, fs::path d): number(s), dir(d) {
         val = t.substr(t_pos+1, t.length());
         index[key] = std::stoi(val);
     }
-};
-Segment::Segment(std::int64_t s, fs::path d, SegmentIndex&& i): number(s), dir(d), index(i) {};
+}
+Segment::Segment(std::int64_t s, fs::path d, SegmentIndex&& i)
+    : number(s), dir(d), index(i) {}
 
 
 void Segment::clear() {

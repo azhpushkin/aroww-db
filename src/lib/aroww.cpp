@@ -71,6 +71,7 @@ int ArowwConnection::open_conn() {
 	printf("Successfully connected to %s\n", s);
 	freeaddrinfo(servinfo); // all done with this structure
     fd_socket = sockfd;
+	this->get("asd");
     return 0;
 }
 
@@ -85,7 +86,6 @@ ArowwResult ArowwConnection::send_command(DBCommand& command) {
     char buf[MAXDATASIZE];
     std::string command_str;
     command.SerializeToString(&command_str);
-
     send(fd_socket, command_str.c_str(), command_str.length(), 0);
     
     if ((numbytes = recv(fd_socket, buf, MAXDATASIZE-1, 0)) == -1) {
@@ -124,4 +124,48 @@ ArowwResult ArowwConnection::drop(std::string key) {
     command.set_type(DBCommandType::DROP);
     command.set_key(key);
     return send_command(command);
+}
+
+
+
+Connection* open_connection(char* host, char* port) {
+	ArowwConnection* cpp_conn = new ArowwConnection{std::string(host), std::string(port)};
+	cpp_conn->open_conn();
+	Connection* c_conn = new Connection{(void*)cpp_conn};
+
+	return c_conn;
+}
+void close_connection(Connection* c_conn) {
+	ArowwConnection* cpp_conn = (ArowwConnection*)c_conn->cpp_conn;
+	cpp_conn->close_conn();
+	delete cpp_conn;
+	delete c_conn;
+}
+
+ConRes* connection_get(Connection* c_conn, char* key) {
+	ArowwConnection* cpp_conn = (ArowwConnection*)c_conn->cpp_conn;
+	auto res = cpp_conn->get(std::string(key));
+	return new ConRes{
+		res.success ? 1 : 0,
+		res.value.has_value() ? res.value.value().c_str() : "" ,
+		res.error_msg.has_value() ? res.error_msg.value().c_str() : "" ,
+	};
+}
+ConRes* connection_set(Connection* c_conn, char* key, char* value) {
+	ArowwConnection* cpp_conn = (ArowwConnection*)c_conn->cpp_conn;
+	auto res = cpp_conn->set(std::string(key), std::string(value));
+	return new ConRes{
+		res.success ? 1 : 0,
+		res.value.has_value() ? res.value.value().c_str() : "" ,
+		res.error_msg.has_value() ? res.error_msg.value().c_str() : "" ,
+	};
+}
+ConRes* connection_drop(Connection* c_conn, char* key) {
+	ArowwConnection* cpp_conn = (ArowwConnection*)c_conn->cpp_conn;
+	auto res = cpp_conn->drop(std::string(key));
+	return new ConRes{
+		res.success ? 1 : 0,
+		res.value.has_value() ? res.value.value().c_str() : "" ,
+		res.error_msg.has_value() ? res.error_msg.value().c_str() : "" ,
+	};
 }

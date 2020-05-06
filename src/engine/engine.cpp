@@ -40,8 +40,12 @@ DBEngine::DBEngine(EngineConfiguration conf_): conf(conf_) {
 
 OpResult DBEngine::get(std::string key)
 {   
-    if (current_memtable.find(key) != current_memtable.end())
-        return OpResult {true, current_memtable.at(key), std::nullopt};
+    if (current_memtable.find(key) != current_memtable.end()) {
+        auto val = current_memtable.at(key);
+        if (val.size()) return OpResult {true, val, std::nullopt};
+        else return OpResult {false, std::nullopt, "Key missing"};
+    }
+        
 
     for (auto s: segments) {
         auto res = s->lookup(key);

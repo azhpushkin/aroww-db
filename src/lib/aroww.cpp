@@ -4,19 +4,64 @@
 #include <errno.h>
 #include <string.h>
 #include <netdb.h>
-#include <sys/types.h>
-#include <netinet/in.h>
 #include <sys/socket.h>
-
 #include <arpa/inet.h>
-
-#include <iostream>
-#include <fmt/format.h>
 
 #include "commands.pb.h"
 #include "aroww.hpp"
 
 #define MAXDATASIZE 100 // max number of bytes we can get at once 
+
+// Do not include to header file as not part of the interface
+void open_socket(ArowwDB* db);
+ArowwResult* send_command(ArowwDB* db, DBCommand& command);
+
+
+ArowwDB* aroww_init(char* host, char* port) {
+	ArowwDB* db = (ArowwDB*) malloc(sizeof(ArowwDB));
+	db->host = strdup(host);
+	db->port = strdup(port);
+	open_socket(db);
+	return db;
+}
+
+void aroww_close(ArowwDB* db) {
+	close(db->socket_fd);
+	free(db->host);
+	free(db->port);
+	free(db);
+}
+
+
+ArowwResult* aroww_get(ArowwDB* db, char* key) {
+	DBCommand command;
+    command.set_type(DBCommandType::GET);
+    command.set_key(std::string(key));
+    return send_command(db, command);
+}
+
+
+ArowwResult* aroww_set(ArowwDB* db, char* key, char* value) {
+    DBCommand command;
+    command.set_type(DBCommandType::SET);
+    command.set_key(std::string(key));
+	command.set_value(std::string(value));
+	return send_command(db, command);
+}
+
+ArowwResult* aroww_drop(ArowwDB* db, char* key) {
+    DBCommand command;
+    command.set_type(DBCommandType::DROP);
+    command.set_key(std::string(key));
+	return send_command(db, command);
+}
+
+void aroww_free_result(ArowwResult* res) {
+	free(res->value);
+	free(res->error_msg);
+	free(res);
+}
+
 
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
@@ -28,9 +73,7 @@ void *get_in_addr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-ArowwConnection::ArowwConnection(std::string host_, std::string port_) : host(host_), port(port_) {}
-
-int ArowwConnection::open_conn() {
+void open_socket(ArowwDB* db) {
     int sockfd;  
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
@@ -40,15 +83,13 @@ int ArowwConnection::open_conn() {
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 
-	if ((rv = getaddrinfo(host.c_str(), port.c_str(), &hints, &servinfo)) != 0) {
+	if ((rv = getaddrinfo(db->host, db->port, &hints, &servinfo)) != 0) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-		return 1;
 	}
 
 	// loop through all the results and connect to the first we can
 	for(p = servinfo; p != NULL; p = p->ai_next) {
-		if ((sockfd = socket(p->ai_family, p->ai_socktype,
-				p->ai_protocol)) == -1) {
+		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
 			perror("client: socket");
 			continue;
 		}
@@ -64,108 +105,33 @@ int ArowwConnection::open_conn() {
 
 	if (p == NULL) {
 		fprintf(stderr, "client: failed to connect\n");
-		return 2;
 	}
 
 	inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr), s, sizeof s);
 	printf("Successfully connected to %s\n", s);
 	freeaddrinfo(servinfo); // all done with this structure
-    fd_socket = sockfd;
-	this->get("asd");
-    return 0;
+    db->socket_fd = sockfd;
 }
 
-
-int ArowwConnection::close_conn() {
-    close(fd_socket);
-	return 0;
-}
-
-ArowwResult ArowwConnection::send_command(DBCommand& command) {
+ArowwResult* send_command(ArowwDB* db, DBCommand& command) {
     int numbytes;
     char buf[MAXDATASIZE];
     std::string command_str;
     command.SerializeToString(&command_str);
-    send(fd_socket, command_str.c_str(), command_str.length(), 0);
+    send(db->socket_fd, command_str.c_str(), command_str.length(), 0);
     
-    if ((numbytes = recv(fd_socket, buf, MAXDATASIZE-1, 0)) == -1) {
+    if ((numbytes = recv(db->socket_fd, buf, MAXDATASIZE-1, 0)) == -1) {
         perror("recv");
         exit(1);
     }
 
-    DBCommandResult result;
-    result.ParseFromString(std::string(buf));
+    DBCommandResult proto_res;
+    proto_res.ParseFromString(std::string(buf));
 
-    ArowwResult ares{};
-    ares.success = (result.type() == 1);
-    if (result.has_value()) ares.value = result.value();
-    if (result.has_error_msg()) ares.error_msg = result.error_msg();
+    ArowwResult* c_res = (ArowwResult*) malloc(sizeof(ArowwResult));
+    c_res->is_ok = (proto_res.type() == 1);
+	c_res->value = proto_res.has_value() ? strdup(proto_res.value().c_str()) : NULL;
+	c_res->error_msg = proto_res.has_error_msg() ? strdup(proto_res.error_msg().c_str()) : NULL;
 
-    return ares;
-}
-    
-ArowwResult ArowwConnection::get(std::string key) {
-    DBCommand command;
-    command.set_type(DBCommandType::GET);
-    command.set_key(key);
-    return send_command(command);
-}
-
-ArowwResult ArowwConnection::set(std::string key, std::string value) {
-    DBCommand command;
-    command.set_type(DBCommandType::SET);
-    command.set_key(key);
-    command.set_value(value);
-    return send_command(command);
-}
-
-ArowwResult ArowwConnection::drop(std::string key) {
-    DBCommand command;
-    command.set_type(DBCommandType::DROP);
-    command.set_key(key);
-    return send_command(command);
-}
-
-
-
-Connection* open_connection(char* host, char* port) {
-	ArowwConnection* cpp_conn = new ArowwConnection{std::string(host), std::string(port)};
-	cpp_conn->open_conn();
-	Connection* c_conn = new Connection{(void*)cpp_conn};
-
-	return c_conn;
-}
-void close_connection(Connection* c_conn) {
-	ArowwConnection* cpp_conn = (ArowwConnection*)c_conn->cpp_conn;
-	cpp_conn->close_conn();
-	delete cpp_conn;
-	delete c_conn;
-}
-
-ConRes* connection_get(Connection* c_conn, char* key) {
-	ArowwConnection* cpp_conn = (ArowwConnection*)c_conn->cpp_conn;
-	auto res = cpp_conn->get(std::string(key));
-	return new ConRes{
-		res.success ? 1 : 0,
-		res.value.has_value() ? res.value.value().c_str() : "" ,
-		res.error_msg.has_value() ? res.error_msg.value().c_str() : "" ,
-	};
-}
-ConRes* connection_set(Connection* c_conn, char* key, char* value) {
-	ArowwConnection* cpp_conn = (ArowwConnection*)c_conn->cpp_conn;
-	auto res = cpp_conn->set(std::string(key), std::string(value));
-	return new ConRes{
-		res.success ? 1 : 0,
-		res.value.has_value() ? res.value.value().c_str() : "" ,
-		res.error_msg.has_value() ? res.error_msg.value().c_str() : "" ,
-	};
-}
-ConRes* connection_drop(Connection* c_conn, char* key) {
-	ArowwConnection* cpp_conn = (ArowwConnection*)c_conn->cpp_conn;
-	auto res = cpp_conn->drop(std::string(key));
-	return new ConRes{
-		res.success ? 1 : 0,
-		res.value.has_value() ? res.value.value().c_str() : "" ,
-		res.error_msg.has_value() ? res.error_msg.value().c_str() : "" ,
-	};
+    return c_res;
 }

@@ -1,46 +1,25 @@
-#include "commands.pb.h"
-
-struct ArowwResult
-{
-    bool success;
-    std::optional<std::string> value = std::nullopt;
-    std::optional<std::string> error_msg = std::nullopt;
-};
-
-class ArowwConnection
-{
-private:
-    std::string host;
-    std::string port;
-
-    int fd_socket;
-
-    ArowwResult send_command(DBCommand &);
-
-public:
-    ArowwConnection(std::string host_, std::string port_);
-    int open_conn();
-    int close_conn();
-
-    ArowwResult get(std::string key);
-    ArowwResult set(std::string key, std::string value);
-    ArowwResult drop(std::string key);
-};
+#include <cstdbool>
 
 
 typedef struct {
-    int is_ok;
-    const char* value;
-    const char* error_msg; 
-} ConRes;
+    char* host;
+    char* port;
 
-typedef struct  {
-    void* cpp_conn;
-} Connection;
+    int socket_fd;
+} ArowwDB;
 
-extern "C" Connection* open_connection(char* host, char* port);
-extern "C" void close_connection(Connection* conn);
+typedef struct {
+    bool is_ok;
+    char* value;
+    char* error_msg;
 
-extern "C" ConRes* connection_get(Connection* conn, char* key);
-extern "C" ConRes* connection_set(Connection* conn, char* key, char* value);
-extern "C" ConRes* connection_drop(Connection* conn, char* key);
+} ArowwResult;
+
+
+extern "C" ArowwDB* aroww_init(char* host, char* port);
+extern "C" void aroww_close(ArowwDB* db);
+
+extern "C" ArowwResult* aroww_get(ArowwDB* db, char* key);
+extern "C" ArowwResult* aroww_set(ArowwDB* db, char* key, char* value);
+extern "C" ArowwResult* aroww_drop(ArowwDB* db, char* key);
+extern "C" void aroww_free_result(ArowwResult* res);

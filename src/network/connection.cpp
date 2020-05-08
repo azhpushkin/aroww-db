@@ -1,5 +1,6 @@
 #include <cerrno>
 #include <sys/socket.h>
+#include <string>
 
 #include <thread>
 
@@ -8,8 +9,6 @@
 
 #include "socket_server.hpp"
 #include "engine/interface.hpp"
-
-#include "commands.pb.h"
 
 
 RunningConnection::RunningConnection(int socket_, AbstractEngine& engine_)
@@ -35,42 +34,54 @@ void RunningConnection::start() {
             perror("Error receiving from connection!");
             break;
         }
-
-        DBCommand command;
         
-        command.ParseFromString(std::string(buffer));
-        std::string type;
-        if (command.type() == 1) type = "GET";
-        if (command.type() == 2) type = "SET";
-        if (command.type() == 3) type = "DROP";
-        spdlog::info(">> {}: received command: {}(key={},value={})", socket, type, command.key(), command.value());
+        spdlog::info(">> {}: received command: {}", socket, buffer);
 
         OpResult opres;
-        DBCommandResult result{};
-        if (command.type() == 1) {  // GET
-            opres = engine.get(command.key());
-            if (opres.success) {
-                result.set_type(ResultType::OK);
-                result.set_value(opres.value.value());
-            } else {
-                result.set_type(ResultType::KEY_MISSING);
-                result.set_error_msg(opres.error_msg.value());
+        if (buffer[0] == 'G') {  // GET
+            char kl = buffer[1];
+            std::string k(buffer+2, kl);
+            opres = engine.get(k);
+        }
+        else if (buffer[0] == 'S') {
+            char kl = buffer[1];
+            char vl = buffer[2+kl];
+            
+            std::string k(buffer+2, kl);
+            std::string v(buffer+2+kl+1, vl);
+            opres = engine.set(k, v);
+        }
+        else if (buffer[0] == 'D') {
+            char kl = buffer[1];
+            std::string k(buffer+2, kl);
+            opres = engine.drop(k);
+        } else {
+            continue;
+        }
+
+        memset(buffer, 0, 500);
+        if (opres.success) {
+            buffer[0] = 'O';
+            buffer[1] = 'K';
+            if (opres.value.has_value()) {
+                auto& v = opres.value.value();
+                buffer[2] = (char) v.size();
+                strcpy(buffer+3, v.c_str());
+            }
+        } else {
+            buffer[0] = 'E';
+            buffer[1] = 'R';
+            if (opres.error_msg.has_value()) {
+                auto& v = opres.error_msg.value();
+                buffer[2] = (char) v.size();
+                strcpy(buffer+3, v.c_str());
             }
         }
-        if (command.type() == 2) {
-            opres = engine.set(command.key(), command.value());
-            result.set_type(ResultType::OK);
-        }
-        if (command.type() == 3) {
-            opres = engine.drop(command.key());
-            result.set_type(ResultType::OK);
-        }
         
-        output.clear();
-        result.SerializeToString(&output);
-        spdlog::info(">> {}: Sending back: {}(key={},value={})", socket, result.type(), command.key(), command.value());
 
-        send(socket, output.c_str(), output.length(), 0);
+        spdlog::info(">> {}: Sending back: {}", socket, buffer);
+
+        send(socket, buffer, strlen(buffer), 0);
     }
 
     close(socket);

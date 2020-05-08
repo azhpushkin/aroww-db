@@ -15,10 +15,7 @@ find_package(Threads REQUIRED)
 # Connect libs for all targets
 find_package(spdlog 1 REQUIRED)
 find_package(fmt 6 REQUIRED)
-find_package(Protobuf REQUIRED)
-set(Protobuf_USE_STATIC_LIBS ON)
 
-link_libraries(${Protobuf_LITE_LIBRARIES})
 link_libraries(fmt::fmt)
 
 add_subdirectory(src)

@@ -39,6 +39,3 @@
 # Cmake build directory
 build/
 
-# Protocol buffer generated files
-*.pb.cc
-*.pb.h

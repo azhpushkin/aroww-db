@@ -7,22 +7,16 @@ cmake_minimum_required(VERSION 3.0)
 set(DIR_PATH ${CMAKE_BINARY_DIR})
 
 
-# Protobuf generation and configuration
-protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS commands.proto)
-
 # Source files
 set(SOURCES
     engine/engine.cpp
     engine/segment.cpp
     network/socket_server.cpp
     network/connection.cpp
-    ${PROTO_SRCS}
 )
 # Separate args to lower final size of library
-set(LIB_SOURCES lib/aroww.cpp ${PROTO_SRCS})
+set(LIB_SOURCES lib/aroww.cpp)
 
-# Include to use protobufs
-include_directories(PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 # Also add this paths to include dir for tests
 set(TESTABLE_HDR_INCLUDE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 

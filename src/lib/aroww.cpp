@@ -7,14 +7,13 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-#include "commands.pb.h"
 #include "aroww.hpp"
 
 #define MAXDATASIZE 100 // max number of bytes we can get at once 
 
 // Do not include to header file as not part of the interface
 void open_socket(ArowwDB* db);
-ArowwResult* send_command(ArowwDB* db, DBCommand& command);
+ArowwResult* get_result(ArowwDB* db);
 
 
 ArowwDB* aroww_init(char* host, char* port) {
@@ -34,26 +33,36 @@ void aroww_close(ArowwDB* db) {
 
 
 ArowwResult* aroww_get(ArowwDB* db, char* key) {
-	DBCommand command;
-    command.set_type(DBCommandType::GET);
-    command.set_key(std::string(key));
-    return send_command(db, command);
+	char buffer[512];
+	buffer[0] = 'G';
+	buffer[1] = strlen(key);
+	strcpy(buffer+2, key);
+	send(db->socket_fd, buffer, strlen(buffer), 0);
+	
+    return get_result(db);
 }
 
 
 ArowwResult* aroww_set(ArowwDB* db, char* key, char* value) {
-    DBCommand command;
-    command.set_type(DBCommandType::SET);
-    command.set_key(std::string(key));
-	command.set_value(std::string(value));
-	return send_command(db, command);
+	char buffer[512];
+	buffer[0] = 'S';
+	buffer[1] = strlen(key);
+	strcpy(buffer+2, key);
+	buffer[strlen(buffer)] = strlen(value);
+	strcpy(buffer+strlen(buffer), value);
+	
+	send(db->socket_fd, buffer, strlen(buffer), 0);
+	return get_result(db);
 }
 
 ArowwResult* aroww_drop(ArowwDB* db, char* key) {
-    DBCommand command;
-    command.set_type(DBCommandType::DROP);
-    command.set_key(std::string(key));
-	return send_command(db, command);
+    char buffer[512];
+	buffer[0] = 'D';
+	buffer[1] = strlen(key);
+	strcpy(buffer+2, key);
+	
+	send(db->socket_fd, buffer, strlen(buffer), 0);
+    return get_result(db);
 }
 
 void aroww_free_result(ArowwResult* res) {
@@ -113,25 +122,31 @@ void open_socket(ArowwDB* db) {
     db->socket_fd = sockfd;
 }
 
-ArowwResult* send_command(ArowwDB* db, DBCommand& command) {
+ArowwResult* get_result(ArowwDB* db) {
     int numbytes;
     char buf[MAXDATASIZE];
-    std::string command_str;
-    command.SerializeToString(&command_str);
-    send(db->socket_fd, command_str.c_str(), command_str.length(), 0);
     
     if ((numbytes = recv(db->socket_fd, buf, MAXDATASIZE-1, 0)) == -1) {
         perror("recv");
         exit(1);
     }
 
-    DBCommandResult proto_res;
-    proto_res.ParseFromString(std::string(buf));
 
     ArowwResult* c_res = (ArowwResult*) malloc(sizeof(ArowwResult));
-    c_res->is_ok = (proto_res.type() == 1);
-	c_res->value = proto_res.has_value() ? strdup(proto_res.value().c_str()) : NULL;
-	c_res->error_msg = proto_res.has_error_msg() ? strdup(proto_res.error_msg().c_str()) : NULL;
-
+	c_res->is_ok = (buf[0] == 'O');
+	c_res->error_msg = NULL;
+	c_res->value = NULL;
+	if (buf[0] == 'O') {  // OK
+		char kl = buf[2];
+		if (kl != 0) {
+			c_res->value = strcpy((char*)malloc(sizeof(char) * (kl+1)), buf+3);
+		}
+	} else {
+		char kl = buf[2];
+		if (kl != 0) {
+			c_res->error_msg = strcpy((char*)malloc(sizeof(char) * (kl+1)), buf+3);
+		}
+	}
+	
     return c_res;
 }

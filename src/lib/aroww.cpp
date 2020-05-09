@@ -8,8 +8,7 @@
 #include <arpa/inet.h>
 
 #include "aroww.hpp"
-
-#define MAXDATASIZE 100 // max number of bytes we can get at once 
+#include "network/messages.hpp"
 
 // Do not include to header file as not part of the interface
 void open_socket(ArowwDB* db);
@@ -33,35 +32,44 @@ void aroww_close(ArowwDB* db) {
 
 
 ArowwResult* aroww_get(ArowwDB* db, char* key) {
-	char buffer[512];
-	buffer[0] = 'G';
-	buffer[1] = strlen(key);
-	strcpy(buffer+2, key);
-	send(db->socket_fd, buffer, strlen(buffer), 0);
+	Req* req = alloc_request();
+	req->type = GET;
+	req->key = key;
+	req->key_len = strlen(key);
+
+	char* packed = pack_request(req);
+	send(db->socket_fd, packed, strlen(packed), 0);
+	free(req);
 	
     return get_result(db);
 }
 
 
 ArowwResult* aroww_set(ArowwDB* db, char* key, char* value) {
-	char buffer[512];
-	buffer[0] = 'S';
-	buffer[1] = strlen(key);
-	strcpy(buffer+2, key);
-	buffer[strlen(buffer)] = strlen(value);
-	strcpy(buffer+strlen(buffer), value);
+	Req* req = alloc_request();
+	req->type = SET;
+	req->key = key;
+	req->key_len = strlen(key);
+	req->value = value;
+	req->value_len = strlen(value);
+
+	char* packed = pack_request(req);
+	send(db->socket_fd, packed, strlen(packed), 0);
+	free(req);
 	
-	send(db->socket_fd, buffer, strlen(buffer), 0);
-	return get_result(db);
+    return get_result(db);
 }
 
 ArowwResult* aroww_drop(ArowwDB* db, char* key) {
-    char buffer[512];
-	buffer[0] = 'D';
-	buffer[1] = strlen(key);
-	strcpy(buffer+2, key);
+	Req* req = alloc_request();
+	req->type = DROP;
+	req->key = key;
+	req->key_len = strlen(key);
+
+	char* packed = pack_request(req);
+	send(db->socket_fd, packed, strlen(packed), 0);
+	free(req);
 	
-	send(db->socket_fd, buffer, strlen(buffer), 0);
     return get_result(db);
 }
 
@@ -124,27 +132,29 @@ void open_socket(ArowwDB* db) {
 
 ArowwResult* get_result(ArowwDB* db) {
     int numbytes;
-    char buf[MAXDATASIZE];
+    char buf[MSG_BUF_SIZE];
     
-    if ((numbytes = recv(db->socket_fd, buf, MAXDATASIZE-1, 0)) == -1) {
+    if ((numbytes = recv(db->socket_fd, buf, MSG_BUF_SIZE-1, 0)) == -1) {
         perror("recv");
         exit(1);
     }
-
-
-    ArowwResult* c_res = (ArowwResult*) malloc(sizeof(ArowwResult));
-	c_res->is_ok = (buf[0] == 'O');
+	Resp* resp = unpack_response(buf);
+	printf("asd%dasd", resp->data_len);
+	ArowwResult* c_res = (ArowwResult*) malloc(sizeof(ArowwResult));
+	c_res->is_ok = (resp->type == GET_OK) | (resp->type == UPDATE_OK);
 	c_res->error_msg = NULL;
 	c_res->value = NULL;
-	if (buf[0] == 'O') {  // OK
-		char kl = buf[2];
-		if (kl != 0) {
-			c_res->value = strcpy((char*)malloc(sizeof(char) * (kl+1)), buf+3);
+	if (c_res->is_ok) {
+		if(resp->data_len != 0)  {
+			c_res->value = (char*)malloc(sizeof(char) * resp->data_len);
+			strncpy(c_res->value, resp->data, resp->data_len);
+			c_res->value[resp->data_len] = '\0';
 		}
 	} else {
-		char kl = buf[2];
-		if (kl != 0) {
-			c_res->error_msg = strcpy((char*)malloc(sizeof(char) * (kl+1)), buf+3);
+		if(resp->data_len != 0)  {
+			c_res->error_msg = (char*)malloc(sizeof(char) * (resp->data_len) + 1);
+			strncpy(c_res->error_msg, resp->data, resp->data_len);
+			c_res->error_msg[resp->data_len] = '\0';
 		}
 	}
 	

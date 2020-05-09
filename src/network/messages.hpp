@@ -19,7 +19,7 @@ enum RespType {
     GET_OK = 'G',
     GET_MISSING = 'M',
     UPDATE_OK = 'U',
-    ERR = 'E',
+    ERR = 'E'
 };
 
 struct Resp {
@@ -28,10 +28,12 @@ struct Resp {
     char* data;
 };
 
+Req* alloc_request();
 char* pack_request(Req*);
 Req* unpack_request(char*);
 void free_request(Req*);
 
+Resp* alloc_response();
 char* pack_response(Resp*);
 Resp* unpack_response(char*);
 void free_response(Resp*);

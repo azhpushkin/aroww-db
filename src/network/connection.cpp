@@ -9,6 +9,7 @@
 
 #include "socket_server.hpp"
 #include "engine/interface.hpp"
+#include "network/messages.hpp"
 
 
 RunningConnection::RunningConnection(int socket_, AbstractEngine& engine_)
@@ -18,13 +19,12 @@ RunningConnection::RunningConnection(int socket_, AbstractEngine& engine_)
 }
 
 void RunningConnection::start() {
-    char buffer[512];
+    char buffer[MSG_BUF_SIZE];
     std::string output;
     int result;
 
     spdlog::info(">> {}: thread started", socket);
     while (1) {
-        memset(buffer, 0, 500);
         result = recv(socket, buffer, 512, 0);
         if (result == 0) {
             spdlog::info(">> {}: connection closed", socket);
@@ -38,50 +38,43 @@ void RunningConnection::start() {
         spdlog::info(">> {}: received command: {}", socket, buffer);
 
         OpResult opres;
-        if (buffer[0] == 'G') {  // GET
-            char kl = buffer[1];
-            std::string k(buffer+2, kl);
-            opres = engine.get(k);
-        }
-        else if (buffer[0] == 'S') {
-            char kl = buffer[1];
-            char vl = buffer[2+kl];
-            
-            std::string k(buffer+2, kl);
-            std::string v(buffer+2+kl+1, vl);
-            opres = engine.set(k, v);
-        }
-        else if (buffer[0] == 'D') {
-            char kl = buffer[1];
-            std::string k(buffer+2, kl);
-            opres = engine.drop(k);
-        } else {
-            continue;
-        }
-
-        memset(buffer, 0, 500);
-        if (opres.success) {
-            buffer[0] = 'O';
-            buffer[1] = 'K';
-            if (opres.value.has_value()) {
-                auto& v = opres.value.value();
-                buffer[2] = (char) v.size();
-                strcpy(buffer+3, v.c_str());
-            }
-        } else {
-            buffer[0] = 'E';
-            buffer[1] = 'R';
-            if (opres.error_msg.has_value()) {
-                auto& v = opres.error_msg.value();
-                buffer[2] = (char) v.size();
-                strcpy(buffer+3, v.c_str());
-            }
-        }
         
+        Req* req = unpack_request(buffer);
+        Resp* resp = alloc_response();
+        if (req->type == GET) {  // GET
+            std::string k(req->key, req->key_len);
+            opres = engine.get(k);
+            resp->type = opres.success ? GET_OK : GET_MISSING;
+        }
+        else if (req->type == SET) {
+            std::string k(req->key, req->key_len);
+            std::string v(req->value, req->value_len);
+            opres = engine.set(k, v);
+            resp->type = UPDATE_OK;
+        }
+        else if (req->type == DROP) {
+            std::string k(req->key, req->key_len);
+            opres = engine.drop(k);
+            resp->type = UPDATE_OK;
+        } else {
+            opres = {false, std::nullopt, "Unknown command!"};
+            resp->type = ERR;
+        }
 
-        spdlog::info(">> {}: Sending back: {}", socket, buffer);
+        
+        if (opres.value.has_value()) {
+            resp->data_len = opres.value.value().size();
+            resp->data = strdup(opres.value.value().c_str());
+        } else if (opres.error_msg.has_value()) {
+            resp->data_len = opres.error_msg.value().size();
+            resp->data = strdup(opres.error_msg.value().c_str());
+        }
+        char* resp_buf = pack_response(resp);
+        spdlog::info(">> {}: Sending back: {}", socket);
 
-        send(socket, buffer, strlen(buffer), 0);
+        send(socket, resp_buf, strlen(resp_buf) + (resp->data_len == 0 ? 1 : 0), 0);
+        free_response(resp);
+        free_request(req);
     }
 
     close(socket);

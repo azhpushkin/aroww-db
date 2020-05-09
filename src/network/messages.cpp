@@ -22,6 +22,17 @@ char* read_str(char* from, char** target_str, char* target_len) {
 }
 
 // REQUEST
+Req* alloc_request() {
+    Req* req = (Req*) malloc (sizeof(Req));
+    req->type = 0;
+    req->key_len = 0;
+    req->key = NULL;
+    req->value_len = 0;
+    req->value = NULL;
+
+    return req;
+}
+
 char* pack_request(Req* req) {
     char* buf = (char*)malloc(sizeof(char) * MSG_BUF_SIZE);
     buf[0] = req->type;
@@ -34,12 +45,8 @@ char* pack_request(Req* req) {
     return buf;
 }
 Req* unpack_request(char* buf) {
-    Req* req = (Req*) malloc (sizeof(Req));
+    Req* req = alloc_request();
     req->type = buf[0];
-    req->key_len = 0;
-    req->key = NULL;
-    req->value_len = 0;
-    req->value = NULL;
     
     
     
@@ -57,6 +64,15 @@ void free_request(Req* req) {
 
 // RESPONSE
 
+Resp* alloc_response() {
+    Resp* resp = (Resp*) malloc (sizeof(Resp));
+    resp->type = 0;
+    resp->data_len = 0;
+    resp->data = NULL;
+
+    return resp;
+}
+
 char* pack_response(Resp* resp) {
     char* buf = (char*)malloc(sizeof(char) * MSG_BUF_SIZE);
     buf[0] = resp->type;
@@ -67,10 +83,8 @@ char* pack_response(Resp* resp) {
     return buf;
 }
 Resp* unpack_response(char* buf) {
-    Resp* resp = (Resp*) malloc (sizeof(Resp));
+    Resp* resp = alloc_response();
     resp->type = buf[0];
-    resp->data_len = 0;
-    resp->data = NULL;
     
     read_str(buf+1, &(resp->data), &(resp->data_len));
     return resp;

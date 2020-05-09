@@ -76,14 +76,12 @@ class ArowwDB:
         
     def to_python(self, struct) -> ArowwResult:
         aroww_res = struct.contents
-        print('VAL', aroww_res.value)
-        print('E', aroww_res.error_msg)
         repr = ArowwResult(
             is_ok=aroww_res.is_ok,
-            value=aroww_res.value.decode('ascii') if aroww_res.value else None,
-            error_msg=aroww_res.error_msg.decode('ascii') if aroww_res.error_msg else None,
+            value=aroww_res.value if aroww_res.value else None,
+            error_msg=aroww_res.error_msg if aroww_res.error_msg else None,
         )
-        self._lib.aroww_free_result(struct)
+        # self._lib.aroww_free_result(struct)
         return repr
         
     

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-project(aroww-db)
+project(aroww-db C CXX)
 include_directories(PUBLIC ${PROJECT_SOURCE_DIR}/src)
 
 
@@ -17,6 +17,8 @@ find_package(spdlog 1 REQUIRED)
 find_package(fmt 6 REQUIRED)
 
 link_libraries(fmt::fmt)
+link_libraries(${CMAKE_THREAD_LIBS_INIT})
+
 
 add_subdirectory(src)
 add_subdirectory(tests)

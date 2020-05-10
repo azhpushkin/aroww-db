@@ -22,24 +22,26 @@ struct memtablecomp {
 };
 
 typedef std::map<std::string, std::optional<std::string>, memtablecomp> MemTable;
-typedef std::map<std::string, int> SegmentIndex;
+typedef std::map<std::string, int64_t> SegmentIndex;
 class DBEngine;
 
 class Segment {
 public:
-    std::int64_t number;  // timestamp, used for ordering
+    std::int64_t timestamp;  // timestamp, used for ordering
     fs::path dir;  // containing directory
+    std::int64_t keys_amount;
+    std::int64_t index_amount;
+    int64_t index_start;
     
     Segment(std::int64_t s, fs::path d);
-    Segment(std::int64_t s, fs::path d, SegmentIndex&& i);
     static std::optional<Segment> parse_path(fs::path);
-    static Segment dump_memtable(MemTable& mtbl, fs::path dir);
+    static std::shared_ptr<Segment> dump_memtable(MemTable& mtbl, fs::path dir);
 
     std::optional<std::string> lookup(std::string key);
     void clear();
 
 private:
-    std::map<std::string, int> index;
+    SegmentIndex index;
 
 };
 

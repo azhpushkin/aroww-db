@@ -16,7 +16,7 @@
 namespace fs = std::filesystem;
 
 #define DATA_SUBDIR "aroww-db"
-#define DUMP_MEMTABLE_SIZE_THRESHOLD 5
+#define DUMP_MEMTABLE_SIZE_THRESHOLD 2
 
 
 DBEngine::DBEngine(EngineConfiguration conf_): conf(conf_) {
@@ -34,7 +34,7 @@ DBEngine::DBEngine(EngineConfiguration conf_): conf(conf_) {
     }
 
     // Sort in descending order, just like reads will behave
-    segments.sort([](SegmentPnt& l, SegmentPnt &r) { return l->number > r->number;});
+    segments.sort([](SegmentPnt& l, SegmentPnt &r) { return l->timestamp > r->timestamp;});
 }
 
 
@@ -93,7 +93,7 @@ void DBEngine::switch_if_needed() {
     }
 
     auto new_segment = Segment::dump_memtable(current_memtable, data_dir);
-    segments.push_front(std::make_shared<Segment>(std::move(new_segment)));
+    segments.push_front(new_segment);
     
     current_memtable.clear();
 

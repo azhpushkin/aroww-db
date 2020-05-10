@@ -14,9 +14,14 @@ set(SOURCES
     network/socket_server.cpp
     network/connection.cpp
     network/messages.cpp
+    utils/serialization.cpp
 )
 # Separate args to lower final size of library
-set(LIB_SOURCES lib/aroww.cpp network/messages.cpp)
+set(LIB_SOURCES
+    lib/aroww.cpp
+    network/messages.cpp
+    utils/serialization.cpp
+)
 
 # Also add this paths to include dir for tests
 set(TESTABLE_HDR_INCLUDE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)

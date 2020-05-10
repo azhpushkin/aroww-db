@@ -5,22 +5,8 @@
 #include <memory>
 
 #include "messages.hpp"
+#include "utils/serialization.hpp"
 
-
-void pack_field(std::stringstream& ss, std::string field) {
-    int64_t size = (int64_t) field.size();
-    ss.write((char*) &(size), sizeof(int64_t));
-    ss.write(field.c_str(), field.size());
-}
-
-
-void unpack_field(std::stringstream& ss, std::string& field) {
-    std::uint64_t str_size;
-    ss.read((char*)(&str_size), sizeof(str_size));
-
-    field.resize(str_size);
-    ss.read(&field[0], str_size);
-}
 
 std::string Message::pack_message() {
     // int64_t msg_size = 0;
@@ -42,20 +28,20 @@ std::string Message::pack_message() {
 void Message::pack_fields(std::stringstream&) {}
 
 void MsgGetReq::pack_fields(std::stringstream& ss) {
-    pack_field(ss, key);
+    pack_string(ss, key);
 }
 void MsgSetReq::pack_fields(std::stringstream& ss) {
-    pack_field(ss, key);
-    pack_field(ss, value);
+    pack_string(ss, key);
+    pack_string(ss, value);
 }
 void MsgDropReq::pack_fields(std::stringstream& ss) {
-    pack_field(ss, key);
+    pack_string(ss, key);
 }
 void MsgGetOkResp::pack_fields(std::stringstream& ss) {
-    pack_field(ss, val);
+    pack_string(ss, val);
 }
 void MsgErrorResp::pack_fields(std::stringstream& ss) {
-    pack_field(ss, error_msg);
+    pack_string(ss, error_msg);
 }
 
 
@@ -81,20 +67,20 @@ std::unique_ptr<Message> Message::unpack_message(std::string s) {
 void Message::unpack_fields(std::stringstream&) {}
 
 void MsgGetReq::unpack_fields(std::stringstream& ss) {
-    unpack_field(ss, key);
+    unpack_string(ss, key);
 }
 void MsgSetReq::unpack_fields(std::stringstream& ss) {
-    unpack_field(ss, key);
-    unpack_field(ss, value);
+    unpack_string(ss, key);
+    unpack_string(ss, value);
 }
 void MsgDropReq::unpack_fields(std::stringstream& ss) {
-    unpack_field(ss, key);
+    unpack_string(ss, key);
 }
 void MsgGetOkResp::unpack_fields(std::stringstream& ss) {
-    unpack_field(ss, val);
+    unpack_string(ss, val);
 }
 void MsgErrorResp::unpack_fields(std::stringstream& ss) {
-    unpack_field(ss, error_msg);
+    unpack_string(ss, error_msg);
 }
 
 

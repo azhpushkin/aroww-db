@@ -1,48 +1,57 @@
 #include <iostream>
 #include <memory>
-#include <stdexcept>
 #include <optional>
 #include <algorithm>
 #include <regex>
 #include <filesystem>
 #include <fstream>
-#include <mutex>
 #include <ctime>
 #include <cstdint>
 
 #include <fmt/format.h>
 
 #include "engine.hpp"
+#include "utils/serialization.hpp"
 
 
-#define INDEX_PATH(dir, num) (dir / fmt::format("{}.index", num))
 #define SSTABLE_PATH(dir, num) (dir / fmt::format("{}.sstable", num))
 
 namespace fs = std::filesystem;
+/* 
+* ## Structure of segment file:
+* 8 bytes -> timestamp
+* 8 bytes -> total amount of keys
+* 8 bytes -> amount of indexed keys
+* 8 bytes -> start of index section (position)
+* m bytes -> contents
+* n bytes -> index 
+*/
 
-// fs::path Segment::get_path(DBEngine* engine) {
-//     return engine->data_dir / fmt::format("db_{0}{1}.txt", number, compressed?"_compressed":"");
-// }
 
+Segment::Segment(std::int64_t s, fs::path d): timestamp(s), dir(d) {
+    std::fstream sstable_file(SSTABLE_PATH(dir, timestamp), std::ios::binary | std::ios::in);
 
-Segment::Segment(std::int64_t s, fs::path d): number(s), dir(d) {
-    std::fstream index_file(INDEX_PATH(dir, number), std::ios::in);
-    
-    std::string t, key, val;
-    while (std::getline( index_file, t )) {
-        size_t t_pos = t.find("\v");
-        key = t.substr(0, t_pos);
-        val = t.substr(t_pos+1, t.length());
-        index[key] = std::stoi(val);
+    // Skip timestamp for now
+    unpack_int64(sstable_file, timestamp);
+    unpack_int64(sstable_file, keys_amount);
+    unpack_int64(sstable_file, index_amount);
+    unpack_int64(sstable_file, index_start);
+
+    sstable_file.seekg(index_start, sstable_file.beg);
+    while (sstable_file.peek() != EOF) {
+        std::string key;
+        int64_t pos;
+
+        unpack_string(sstable_file, key);
+        unpack_int64(sstable_file, pos);
+        
+        index[key] = pos;
     }
 }
-Segment::Segment(std::int64_t s, fs::path d, SegmentIndex&& i)
-    : number(s), dir(d), index(i) {}
 
 
 void Segment::clear() {
-    fs::remove(INDEX_PATH(dir, number));
-    fs::remove(SSTABLE_PATH(dir, number));
+    fs::remove(SSTABLE_PATH(dir, timestamp));
 }
 
 std::optional<Segment> Segment::parse_path(fs::path path) {
@@ -64,40 +73,57 @@ std::optional<Segment> Segment::parse_path(fs::path path) {
 }
 
 
-Segment Segment::dump_memtable(MemTable& mtbl, fs::path dir) {
-    int64_t t = static_cast<int64_t>(time(NULL));
-    std::fstream sstable(SSTABLE_PATH(dir, t), std::ios::app);
-    std::fstream index_file(INDEX_PATH(dir, t), std::ios::app);
+std::shared_ptr<Segment> Segment::dump_memtable(MemTable& mtbl, fs::path dir) {
+    int64_t timestamp = static_cast<int64_t>(time(NULL));
+    int64_t total_size = static_cast<int64_t>(mtbl.size());
+    int64_t index_size = static_cast<int64_t>(mtbl.size());  // same as total currently
+    int64_t index_start_pos = 0;  // filled later
+
+    std::fstream sstable(SSTABLE_PATH(dir, timestamp), std::ios::binary | std::ios::out | std::ios::ate);
+    pack_int64(sstable, timestamp);
+    pack_int64(sstable, total_size);
+    pack_int64(sstable, index_size);
+    pack_int64(sstable, index_start_pos);
+
 
     SegmentIndex index;
 
+    // write contents, remember positions for index creation
     for (auto pair: mtbl) {
         auto pos = sstable.tellp();
-        // sstable << pair.first << "\v" << pair.second << std::endl;
-        // index_file << pair.first << "\v" << pos << std::endl;
+        
+        pack_string(sstable, pair.first);
+        pack_string_or_tomb(sstable, pair.second);
+
         index[pair.first] = pos;
     }
 
-    return Segment{t, dir, std::move(index)};
+    index_start_pos = sstable.tellp();
+    for (auto pair: index) {
+        pack_string(sstable, pair.first);
+        pack_int64(sstable, pair.second);
+    }
+
+    sstable.seekp(sizeof(int64_t) * 3, sstable.beg);
+    pack_int64(sstable, index_start_pos);  // write start of index
+    sstable.close();
+
+    return std::make_shared<Segment>(timestamp, dir);
 }
 
 
 std::optional<std::string> Segment::lookup(std::string key) {
+    std::fstream sstable_file(SSTABLE_PATH(dir, timestamp), std::ios::binary | std::ios::in);
     if (index.find(key) == index.end()) {
         return std::nullopt;  // not present
     }
     int pos = index.at(key);
-        
-    std::fstream sstable(SSTABLE_PATH(dir, number), std::ios::in);
-    sstable.seekg(pos, sstable.beg);
 
-    std::string temp;
-    std::getline(sstable, temp);
-    size_t file_pos = temp.find("\v");
-    if (file_pos+1 == temp.length()) {
-        return "";  // TOMB, empty value means key removed
-    }
-    else {
-        return temp.substr(file_pos+1, temp.length());
-    }
+    sstable_file.seekg(pos, sstable_file.beg);
+
+    std::string key_from_file;
+    std::optional<std::string> value;
+    unpack_string(sstable_file, key_from_file);
+    unpack_string_or_tomb(sstable_file, value);
+    return value;
 }

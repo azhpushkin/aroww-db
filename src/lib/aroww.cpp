@@ -32,43 +32,33 @@ void aroww_close(ArowwDB* db) {
 
 
 ArowwResult* aroww_get(ArowwDB* db, char* key) {
-	Req* req = alloc_request();
-	req->type = GET;
-	req->key = key;
-	req->key_len = strlen(key);
+	MsgGetReq msg;
+	msg.key = std::string(key);
 
-	char* packed = pack_request(req);
-	send(db->socket_fd, packed, strlen(packed), 0);
-	free(req);
+	auto packed = msg.pack_message();
+	send(db->socket_fd, packed.c_str(), packed.size(), 0);
 	
     return get_result(db);
 }
 
 
 ArowwResult* aroww_set(ArowwDB* db, char* key, char* value) {
-	Req* req = alloc_request();
-	req->type = SET;
-	req->key = key;
-	req->key_len = strlen(key);
-	req->value = value;
-	req->value_len = strlen(value);
+	MsgSetReq msg;
+	msg.key = std::string(key);
+	msg.value = std::string(value);
 
-	char* packed = pack_request(req);
-	send(db->socket_fd, packed, strlen(packed), 0);
-	free(req);
+	auto packed = msg.pack_message();
+	send(db->socket_fd, packed.c_str(), packed.size(), 0);
 	
     return get_result(db);
 }
 
 ArowwResult* aroww_drop(ArowwDB* db, char* key) {
-	Req* req = alloc_request();
-	req->type = DROP;
-	req->key = key;
-	req->key_len = strlen(key);
+	MsgDropReq msg;
+	msg.key = std::string(key);
 
-	char* packed = pack_request(req);
-	send(db->socket_fd, packed, strlen(packed), 0);
-	free(req);
+	auto packed = msg.pack_message();
+	send(db->socket_fd, packed.c_str(), packed.size(), 0);
 	
     return get_result(db);
 }
@@ -78,6 +68,11 @@ void aroww_free_result(ArowwResult* res) {
 	free(res->error_msg);
 	free(res);
 }
+
+
+
+// Private part of the lib, not included into .hpp
+
 
 
 // get sockaddr, IPv4 or IPv6:
@@ -130,33 +125,47 @@ void open_socket(ArowwDB* db) {
     db->socket_fd = sockfd;
 }
 
+
 ArowwResult* get_result(ArowwDB* db) {
     int numbytes;
-    char buf[MSG_BUF_SIZE];
+    char buf[1024];
     
-    if ((numbytes = recv(db->socket_fd, buf, MSG_BUF_SIZE-1, 0)) == -1) {
+    if ((numbytes = recv(db->socket_fd, buf, 1024-1, 0)) == -1) {
         perror("recv");
         exit(1);
     }
-	Resp* resp = unpack_response(buf);
-	printf("asd%dasd", resp->data_len);
+	auto msg = Message::unpack_message(std::string(buf, numbytes));
 	ArowwResult* c_res = (ArowwResult*) malloc(sizeof(ArowwResult));
-	c_res->is_ok = (resp->type == GET_OK) | (resp->type == UPDATE_OK);
-	c_res->error_msg = NULL;
-	c_res->value = NULL;
-	if (c_res->is_ok) {
-		if(resp->data_len != 0)  {
-			c_res->value = (char*)malloc(sizeof(char) * resp->data_len);
-			strncpy(c_res->value, resp->data, resp->data_len);
-			c_res->value[resp->data_len] = '\0';
-		}
+
+	if (auto p = dynamic_cast<MsgGetOkResp*>(msg.get())) {
+		c_res->is_ok = true;
+		c_res->error_msg = NULL;
+		c_res->value = (char*)malloc((p->val.size() + 1) * sizeof(char));
+		strncpy(c_res->value, p->val.c_str(), p->val.size()+1);
+
+	} else if (dynamic_cast<MsgGetMissingResp*>(msg.get())) {
+		c_res->is_ok = false;
+		c_res->error_msg = NULL;
+		c_res->value = NULL;
+
+	} else if (dynamic_cast<MsgUpdateOkResp*>(msg.get())) {
+		c_res->is_ok = true;
+		c_res->error_msg = NULL;
+		c_res->value = NULL;
+
+	} else if (auto p = dynamic_cast<MsgErrorResp*>(msg.get())) {
+		c_res->is_ok = false;
+		c_res->value = NULL;
+		c_res->error_msg = (char*)malloc((p->error_msg.size() + 1) * sizeof(char));
+
+		strncpy(c_res->error_msg, p->error_msg.c_str(), p->error_msg.size()+1);
 	} else {
-		if(resp->data_len != 0)  {
-			c_res->error_msg = (char*)malloc(sizeof(char) * (resp->data_len) + 1);
-			strncpy(c_res->error_msg, resp->data, resp->data_len);
-			c_res->error_msg[resp->data_len] = '\0';
-		}
+		c_res->is_ok = false;
+		c_res->error_msg = NULL;
+		c_res->value = (char*)malloc(14 * sizeof(char));
+		strncpy(c_res->value, "Bad response.", 14);
 	}
 	
     return c_res;
 }
+

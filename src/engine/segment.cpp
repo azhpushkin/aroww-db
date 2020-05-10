@@ -73,8 +73,8 @@ Segment Segment::dump_memtable(MemTable& mtbl, fs::path dir) {
 
     for (auto pair: mtbl) {
         auto pos = sstable.tellp();
-        sstable << pair.first << "\v" << pair.second << std::endl;
-        index_file << pair.first << "\v" << pos << std::endl;
+        // sstable << pair.first << "\v" << pair.second << std::endl;
+        // index_file << pair.first << "\v" << pos << std::endl;
         index[pair.first] = pos;
     }
 

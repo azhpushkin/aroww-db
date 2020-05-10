@@ -19,62 +19,43 @@ RunningConnection::RunningConnection(int socket_, AbstractEngine& engine_)
 }
 
 void RunningConnection::start() {
-    char buffer[MSG_BUF_SIZE];
+    char buffer[1024];
     std::string output;
-    int result;
+    int bytes_read;
 
     spdlog::info(">> {}: thread started", socket);
     while (1) {
-        result = recv(socket, buffer, 512, 0);
-        if (result == 0) {
+        bytes_read = recv(socket, buffer, 512, 0);
+        if (bytes_read == 0) {
             spdlog::info(">> {}: connection closed", socket);
             break;
         }
-        if (result == -1) {
+        if (bytes_read == -1) {
             perror("Error receiving from connection!");
             break;
         }
         
-        spdlog::info(">> {}: received command: {}", socket, buffer);
-
-        OpResult opres;
+        auto req = Message::unpack_message(std::move(std::string(buffer, bytes_read)));
+        spdlog::info(">> {}: received command: {}", socket, req->get_flag());
         
-        Req* req = unpack_request(buffer);
-        Resp* resp = alloc_response();
-        if (req->type == GET) {  // GET
-            std::string k(req->key, req->key_len);
-            opres = engine.get(k);
-            resp->type = opres.success ? GET_OK : GET_MISSING;
-        }
-        else if (req->type == SET) {
-            std::string k(req->key, req->key_len);
-            std::string v(req->value, req->value_len);
-            opres = engine.set(k, v);
-            resp->type = UPDATE_OK;
-        }
-        else if (req->type == DROP) {
-            std::string k(req->key, req->key_len);
-            opres = engine.drop(k);
-            resp->type = UPDATE_OK;
+
+        std::unique_ptr<Message> resp;
+        if (auto p = dynamic_cast<MsgGetReq*>(req.get())) {
+            resp = engine.get(p->key);
+        } else if (auto p = dynamic_cast<MsgSetReq*>(req.get())) {
+            resp = engine.set(p->key, p->value);
+        }else if (auto p = dynamic_cast<MsgDropReq*>(req.get())) {
+            resp = engine.drop(p->key);
         } else {
-            opres = {false, std::nullopt, "Unknown command!"};
-            resp->type = ERR;
+            auto err = new MsgErrorResp();
+            err->error_msg = fmt::format("Not supported operation: {}", req->get_flag());
+            resp = std::unique_ptr<Message>(err);
         }
 
-        
-        if (opres.value.has_value()) {
-            resp->data_len = opres.value.value().size();
-            resp->data = strdup(opres.value.value().c_str());
-        } else if (opres.error_msg.has_value()) {
-            resp->data_len = opres.error_msg.value().size();
-            resp->data = strdup(opres.error_msg.value().c_str());
-        }
-        char* resp_buf = pack_response(resp);
-        spdlog::info(">> {}: Sending back: {}", socket);
+        std::string resp_buf = resp->pack_message();
+        spdlog::info(">> {}: Sending back: {}", socket, resp->get_flag());
 
-        send(socket, resp_buf, strlen(resp_buf) + (resp->data_len == 0 ? 1 : 0), 0);
-        free_response(resp);
-        free_request(req);
+        send(socket, resp_buf.c_str(), resp_buf.size(), 0);
     }
 
     close(socket);

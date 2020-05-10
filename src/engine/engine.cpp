@@ -38,14 +38,19 @@ DBEngine::DBEngine(EngineConfiguration conf_): conf(conf_) {
 }
 
 
-OpResult DBEngine::get(std::string key)
+std::unique_ptr<Message> DBEngine::get(std::string key)
 {   
     if (current_memtable.find(key) != current_memtable.end()) {
         auto val = current_memtable.at(key);
-        if (val.size()) return OpResult {true, val, std::nullopt};
-        else return OpResult {false, std::nullopt, "Key missing"};
+        if (val.has_value()) {
+            auto resp = std::make_unique<MsgGetOkResp>();
+            resp->val = val.value();
+            return resp;
+        }
+        else {
+            return std::make_unique<MsgGetMissingResp>();
+        }
     }
-        
 
     for (auto s: segments) {
         auto res = s->lookup(key);
@@ -54,29 +59,31 @@ OpResult DBEngine::get(std::string key)
         }
         auto value = res.value();
         if (value.size() == 0)  {
-            return OpResult {false, std::nullopt, "Key missing"};
+            return std::make_unique<MsgGetMissingResp>();
         } else {
-            return OpResult {true, value, std::nullopt};
+            auto resp = std::make_unique<MsgGetOkResp>();
+            resp->val = value;
+            return resp;
         }
     }
-    return OpResult {false, std::nullopt, "Key missing"};
+    return std::make_unique<MsgGetMissingResp>();
 }
 
 
-OpResult DBEngine::set(std::string key, std::string value)
+std::unique_ptr<Message> DBEngine::set(std::string key, std::string value)
 {
     std::lock_guard<std::mutex> guard(write_file_mutex);
     current_memtable[key] = value;
     switch_if_needed();
-    return OpResult {true, std::nullopt, std::nullopt};
+    return std::make_unique<MsgUpdateOkResp>();
 }
 
-OpResult DBEngine::drop(std::string key)
+std::unique_ptr<Message> DBEngine::drop(std::string key)
 {
     std::lock_guard<std::mutex> guard(write_file_mutex);
-    current_memtable[key] = "";
+    current_memtable[key] = std::nullopt;
     switch_if_needed();
-    return OpResult {true, std::nullopt, std::nullopt};
+    return std::make_unique<MsgUpdateOkResp>();
 }
 
 

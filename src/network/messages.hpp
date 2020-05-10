@@ -1,39 +1,86 @@
-#define MSG_BUF_SIZE 1024
+#pragma once
 
-enum ReqType {
-    GET = 'G',
-    SET = 'S',
-    DROP = 'D'
+#include <cstdint>
+#include <string>
+#include <sstream>
+#include <memory>
+
+
+
+enum MsgType {
+    GetReqType = 'G',
+    SetReqType = 'S',
+    DropReqType = 'D',
+    GetOkRespType = 'g',
+    GetMissingRespType = 'm',
+    UpdateOkRespType = 's',
+    ErrorRespType = 'e',
 };
 
-struct Req {
-    char type;
-    char key_len;
-    char* key;
-    char value_len;
-    char* value;
+
+class Message {
+public:
+    std::string pack_message();
+    static std::unique_ptr<Message> unpack_message(std::string);
+    virtual char get_flag() = 0;
+private:
+    virtual void pack_fields(std::stringstream& ss);
+    virtual void unpack_fields(std::stringstream& ss);
+};
+
+class MsgGetReq: public Message {
+public:
+    std::string key;
+    char get_flag() { return GetReqType; };
+private:
+    void pack_fields(std::stringstream& ss);
+    void unpack_fields(std::stringstream& ss);
+};
+
+class MsgSetReq: public Message {
+public:
+    std::string key;
+    std::string value;
+    char get_flag() { return SetReqType; };
+private:
+    void pack_fields(std::stringstream& ss);
+    void unpack_fields(std::stringstream& ss);
+};
+
+class MsgDropReq: public Message {
+public:
+    std::string key;
+    char get_flag() { return DropReqType; };
+private:
+    void pack_fields(std::stringstream& ss);
+    void unpack_fields(std::stringstream& ss);    
 };
 
 
-enum RespType {
-    GET_OK = 'G',
-    GET_MISSING = 'M',
-    UPDATE_OK = 'U',
-    ERR = 'E'
+class MsgGetOkResp: public Message {
+public:
+    std::string val;
+    char get_flag() { return GetOkRespType; };
+private:
+    void pack_fields(std::stringstream& ss);
+    void unpack_fields(std::stringstream& ss);
 };
 
-struct Resp {
-    char type;
-    char data_len;
-    char* data;
+class MsgGetMissingResp: public Message {
+public:
+    char get_flag() { return GetMissingRespType; };
 };
 
-Req* alloc_request();
-char* pack_request(Req*);
-Req* unpack_request(char*);
-void free_request(Req*);
+class MsgUpdateOkResp: public Message {
+public:
+    char get_flag() { return UpdateOkRespType; };
+};
 
-Resp* alloc_response();
-char* pack_response(Resp*);
-Resp* unpack_response(char*);
-void free_response(Resp*);
+class MsgErrorResp: public Message {
+public:
+    std::string error_msg;
+    char get_flag() { return ErrorRespType; };
+private:
+    void pack_fields(std::stringstream& ss);
+    void unpack_fields(std::stringstream& ss); 
+};

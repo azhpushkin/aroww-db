@@ -8,8 +8,10 @@
 #include <utility>
 #include <list>
 #include <mutex>
+#include <optional>
 
 #include "interface.hpp"
+#include "network/messages.hpp"
 
 
 namespace fs = std::filesystem;
@@ -19,7 +21,7 @@ struct memtablecomp {
   {return lhs<rhs;}
 };
 
-typedef std::map<std::string, std::string, memtablecomp> MemTable;
+typedef std::map<std::string, std::optional<std::string>, memtablecomp> MemTable;
 typedef std::map<std::string, int> SegmentIndex;
 class DBEngine;
 
@@ -56,9 +58,9 @@ public:
 class DBEngine : public AbstractEngine {
 public:
     DBEngine(EngineConfiguration conf);
-    OpResult get(std::string key);
-    OpResult set(std::string key, std::string value);
-    OpResult drop(std::string key);
+    std::unique_ptr<Message> get(std::string key);
+    std::unique_ptr<Message> set(std::string key, std::string value);
+    std::unique_ptr<Message> drop(std::string key);
 private:
     EngineConfiguration conf;
     fs::path data_dir;

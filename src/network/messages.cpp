@@ -1,95 +1,101 @@
+#include <iostream>
 #include <cstdlib>
 #include <cstring>
+#include <sstream>
+#include <memory>
 
 #include "messages.hpp"
 
 
-char* write_str(char* dest, char* src, char len) {
-    dest[0] = len;
-    ++dest;
+void pack_field(std::stringstream& ss, std::string field) {
+    int64_t size = (int64_t) field.size();
+    ss.write((char*) &(size), sizeof(int64_t));
+    ss.write(field.c_str(), field.size());
+}
+
+
+void unpack_field(std::stringstream& ss, std::string& field) {
+    std::uint64_t str_size;
+    ss.read((char*)(&str_size), sizeof(str_size));
+
+    field.resize(str_size);
+    ss.read(&field[0], str_size);
+}
+
+std::string Message::pack_message() {
+    // int64_t msg_size = 0;
+    std::stringstream ss;
+
+    char type = get_flag();
+    // ss.write((char*) &msg_size, sizeof(msg_size));
+    ss.write(&(type), 1);
+    pack_fields(ss);
+    // msg_size = ss.tellp();  // Last position as length
+
+    // ss.seekp(ss.beg);
+
+    // ss.write((char*) &msg_size, sizeof(msg_size));
+
+    return ss.str();
+}
+
+void Message::pack_fields(std::stringstream&) {}
+
+void MsgGetReq::pack_fields(std::stringstream& ss) {
+    pack_field(ss, key);
+}
+void MsgSetReq::pack_fields(std::stringstream& ss) {
+    pack_field(ss, key);
+    pack_field(ss, value);
+}
+void MsgDropReq::pack_fields(std::stringstream& ss) {
+    pack_field(ss, key);
+}
+void MsgGetOkResp::pack_fields(std::stringstream& ss) {
+    pack_field(ss, val);
+}
+void MsgErrorResp::pack_fields(std::stringstream& ss) {
+    pack_field(ss, error_msg);
+}
+
+
+std::unique_ptr<Message> Message::unpack_message(std::string s) {
+    std::stringstream ss(s, std::ios::in);
+
+    char msg_type;
+    ss.read(&msg_type, 1);
     
-    strncpy(dest, src, len);
-    return dest + len;
+    std::unique_ptr<Message> msg;
+
+    if      (msg_type == 'G') msg = std::make_unique<MsgGetReq>();
+    else if (msg_type == 'S') msg = std::make_unique<MsgSetReq>();
+    else if (msg_type == 'D') msg = std::make_unique<MsgDropReq>();
+    else if (msg_type == 'g') msg = std::make_unique<MsgGetOkResp>();
+    else if (msg_type == 'm') msg = std::make_unique<MsgGetMissingResp>();
+    else if (msg_type == 's') msg = std::make_unique<MsgUpdateOkResp>();
+    else if (msg_type == 'e') msg = std::make_unique<MsgErrorResp>();
+    msg->unpack_fields(ss); 
+    return msg;
 }
 
-char* read_str(char* from, char** target_str, char* target_len) {
-    *target_len = from[0];
-    ++from;
-    
-    *target_str = (char*)malloc(sizeof(char) * (*target_len));
-    strncpy(*target_str, from, (*target_len));
-    return from + (*target_len);
+void Message::unpack_fields(std::stringstream&) {}
+
+void MsgGetReq::unpack_fields(std::stringstream& ss) {
+    unpack_field(ss, key);
+}
+void MsgSetReq::unpack_fields(std::stringstream& ss) {
+    unpack_field(ss, key);
+    unpack_field(ss, value);
+}
+void MsgDropReq::unpack_fields(std::stringstream& ss) {
+    unpack_field(ss, key);
+}
+void MsgGetOkResp::unpack_fields(std::stringstream& ss) {
+    unpack_field(ss, val);
+}
+void MsgErrorResp::unpack_fields(std::stringstream& ss) {
+    unpack_field(ss, error_msg);
 }
 
-// REQUEST
-Req* alloc_request() {
-    Req* req = (Req*) malloc (sizeof(Req));
-    req->type = 0;
-    req->key_len = 0;
-    req->key = NULL;
-    req->value_len = 0;
-    req->value = NULL;
 
-    return req;
-}
 
-char* pack_request(Req* req) {
-    char* buf = (char*)malloc(sizeof(char) * MSG_BUF_SIZE);
-    buf[0] = req->type;
-
-    char* tmp = write_str(buf+1, req->key, req->key_len);
-    if (req->value != NULL) {
-        write_str(tmp, req->value, req->value_len);
-    }
-
-    return buf;
-}
-Req* unpack_request(char* buf) {
-    Req* req = alloc_request();
-    req->type = buf[0];
-    
-    
-    
-    char* tmp = read_str(buf+1, &(req->key), &(req->key_len));
-    if (tmp[0] > 0) {
-        read_str(tmp, &(req->value), &(req->value_len));
-    }
-    return req;
-}
-void free_request(Req* req) {
-    free(req->key);
-    free(req->value);
-    free(req);
-}
-
-// RESPONSE
-
-Resp* alloc_response() {
-    Resp* resp = (Resp*) malloc (sizeof(Resp));
-    resp->type = 0;
-    resp->data_len = 0;
-    resp->data = NULL;
-
-    return resp;
-}
-
-char* pack_response(Resp* resp) {
-    char* buf = (char*)malloc(sizeof(char) * MSG_BUF_SIZE);
-    buf[0] = resp->type;
-
-    if (resp->data_len > 0) {
-        write_str(buf+1, resp->data, resp->data_len);
-    }
-    return buf;
-}
-Resp* unpack_response(char* buf) {
-    Resp* resp = alloc_response();
-    resp->type = buf[0];
-    
-    read_str(buf+1, &(resp->data), &(resp->data_len));
-    return resp;
-}
-void free_response(Resp* resp) {
-    free(resp->data);
-    free(resp);
-}

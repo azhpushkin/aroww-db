@@ -9,6 +9,7 @@
 #include <list>
 #include <mutex>
 #include <optional>
+#include <variant>
 
 #include "interface.hpp"
 #include "network/messages.hpp"
@@ -27,18 +28,17 @@ class DBEngine;
 
 class Segment {
 public:
+    fs::path file_path;
     std::int64_t timestamp;  // timestamp, used for ordering
-    fs::path dir;  // containing directory
     std::int64_t keys_amount;
-    std::int64_t index_amount;
+    std::int64_t indexed_keys_amount;
     int64_t index_start;
     
-    Segment(std::int64_t s, fs::path d);
-    static std::optional<Segment> parse_path(fs::path);
+    Segment(fs::path d);
+    static std::optional<std::shared_ptr<Segment>> parse_path(fs::path);
     static std::shared_ptr<Segment> dump_memtable(MemTable& mtbl, fs::path dir);
 
-    std::optional<std::string> lookup(std::string key);
-    void clear();
+    std::optional<std::variant<std::string, std::nullptr_t>> lookup(std::string key);
 
 private:
     SegmentIndex index;

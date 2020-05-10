@@ -7,6 +7,7 @@
 #include <fstream>
 #include <ctime>
 #include <cstdint>
+#include <variant>
 
 #include <fmt/format.h>
 
@@ -14,7 +15,7 @@
 #include "utils/serialization.hpp"
 
 
-#define SSTABLE_PATH(dir, num) (dir / fmt::format("{}.sstable", num))
+#define SSTABLE_PATH(dir, timestamp) (dir / fmt::format("{}.sstable", timestamp))
 
 namespace fs = std::filesystem;
 /* 
@@ -28,13 +29,13 @@ namespace fs = std::filesystem;
 */
 
 
-Segment::Segment(std::int64_t s, fs::path d): timestamp(s), dir(d) {
-    std::fstream sstable_file(SSTABLE_PATH(dir, timestamp), std::ios::binary | std::ios::in);
+Segment::Segment(fs::path p): file_path(p) {
+    std::fstream sstable_file(p, std::ios::binary | std::ios::in);
 
     // Skip timestamp for now
     unpack_int64(sstable_file, timestamp);
     unpack_int64(sstable_file, keys_amount);
-    unpack_int64(sstable_file, index_amount);
+    unpack_int64(sstable_file, indexed_keys_amount);
     unpack_int64(sstable_file, index_start);
 
     sstable_file.seekg(index_start, sstable_file.beg);
@@ -50,26 +51,16 @@ Segment::Segment(std::int64_t s, fs::path d): timestamp(s), dir(d) {
 }
 
 
-void Segment::clear() {
-    fs::remove(SSTABLE_PATH(dir, timestamp));
-}
-
-std::optional<Segment> Segment::parse_path(fs::path path) {
-    std::regex rx(".*/([0-9]+).sstable");
+std::optional<std::shared_ptr<Segment>> Segment::parse_path(fs::path path) {
+    std::regex rx(".*/[0-9]+.sstable");
     std::smatch match;
     std::string temp = path.string();
-        
+    
+    std::shared_ptr<Segment> segment;
     if(!std::regex_match(temp, match, rx)) {
         return std::nullopt;
     }
-    std::int64_t number = std::stoi(match[1].str());
-    if(!fs::exists(path.parent_path() / (match[1].str() + ".index"))) {
-        // No matching index, skip
-        return std::nullopt;
-    }
-
-    // Regex guarantees that match will work fine
-    return Segment{number, path.parent_path()};
+    return std::make_shared<Segment>(path);
 }
 
 
@@ -84,7 +75,6 @@ std::shared_ptr<Segment> Segment::dump_memtable(MemTable& mtbl, fs::path dir) {
     pack_int64(sstable, total_size);
     pack_int64(sstable, index_size);
     pack_int64(sstable, index_start_pos);
-
 
     SegmentIndex index;
 
@@ -108,12 +98,12 @@ std::shared_ptr<Segment> Segment::dump_memtable(MemTable& mtbl, fs::path dir) {
     pack_int64(sstable, index_start_pos);  // write start of index
     sstable.close();
 
-    return std::make_shared<Segment>(timestamp, dir);
+    return std::make_shared<Segment>(SSTABLE_PATH(dir, timestamp));
 }
 
 
-std::optional<std::string> Segment::lookup(std::string key) {
-    std::fstream sstable_file(SSTABLE_PATH(dir, timestamp), std::ios::binary | std::ios::in);
+std::optional<std::variant<std::string, std::nullptr_t>> Segment::lookup(std::string key) {
+    std::fstream sstable_file(file_path, std::ios::binary | std::ios::in);
     if (index.find(key) == index.end()) {
         return std::nullopt;  // not present
     }
@@ -125,5 +115,10 @@ std::optional<std::string> Segment::lookup(std::string key) {
     std::optional<std::string> value;
     unpack_string(sstable_file, key_from_file);
     unpack_string_or_tomb(sstable_file, value);
-    return value;
+    if (value.has_value()) {
+        return value.value();
+    }
+    else {
+        return nullptr;
+    }
 }

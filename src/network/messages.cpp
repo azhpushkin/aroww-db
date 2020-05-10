@@ -9,18 +9,11 @@
 
 
 std::string Message::pack_message() {
-    // int64_t msg_size = 0;
     std::stringstream ss;
 
     char type = get_flag();
-    // ss.write((char*) &msg_size, sizeof(msg_size));
     ss.write(&(type), 1);
     pack_fields(ss);
-    // msg_size = ss.tellp();  // Last position as length
-
-    // ss.seekp(ss.beg);
-
-    // ss.write((char*) &msg_size, sizeof(msg_size));
 
     return ss.str();
 }

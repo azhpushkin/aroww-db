@@ -71,10 +71,6 @@ void aroww_free_result(ArowwResult* res) {
 
 
 
-// Private part of the lib, not included into .hpp
-
-
-
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
 {

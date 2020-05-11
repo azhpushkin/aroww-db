@@ -38,8 +38,8 @@ public:
     Segment(fs::path d);
 
     static std::optional<SegmentPtr> parse_path(fs::path);
-    static SegmentPtr dump_memtable(MemTable& mtbl, fs::path dir);
-    static SegmentPtr merge(std::vector<SegmentPtr>);
+    static SegmentPtr dump_memtable(MemTable& mtbl, fs::path dir, int index_step);
+    static SegmentPtr merge(std::vector<SegmentPtr>, int index_step);
 
     std::optional<std::variant<std::string, std::nullptr_t>> lookup(std::string key);
 
@@ -53,8 +53,13 @@ private:
 class EngineConfiguration {
 public:
     fs::path dir_path;
+    int index_step;
     int max_segment_size;
-    EngineConfiguration(fs::path p_, int m_): dir_path(p_), max_segment_size(m_) {};
+
+    EngineConfiguration(fs::path dir, int index_step, int max_segment_size);
+
+    static int DEFAULT_MAX_SEGMENT_SIZE;
+    static int DEFAULT_INDEX_STEP;
 };
 
 

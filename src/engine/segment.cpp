@@ -66,7 +66,7 @@ std::optional<std::shared_ptr<Segment>> Segment::parse_path(fs::path path) {
 }
 
 
-std::shared_ptr<Segment> Segment::dump_memtable(MemTable& mtbl, fs::path dir) {
+std::shared_ptr<Segment> Segment::dump_memtable(MemTable& mtbl, fs::path dir, int index_step) {
     int64_t timestamp = static_cast<int64_t>(time(NULL));
     int64_t total_size = static_cast<int64_t>(mtbl.size());
     int64_t index_size = static_cast<int64_t>(mtbl.size());  // same as total currently
@@ -125,7 +125,7 @@ std::optional<std::variant<std::string, std::nullptr_t>> Segment::lookup(std::st
     }
 }
 
-SegmentPtr Segment::merge(std::vector<SegmentPtr> segments) {
+SegmentPtr Segment::merge(std::vector<SegmentPtr> segments, int index_step) {
     // Prepare data of new segment
     auto latest = segments.front();
     std::fstream target_sstable(

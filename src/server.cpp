@@ -14,6 +14,7 @@ int main(int argc, char* argv[])
         // TODO process verbose keyword to show different spdlog
         ("v,verbose", "Output all info", cxxopts::value<bool>()->default_value("true"))
         ("d,datadir", "Path to directory for storing data", cxxopts::value<std::string>())
+        ("i,index", "Index each N elements", cxxopts::value<int>()->default_value("5"))
         ("p,port", "Port for connections", cxxopts::value<int>()->default_value("7333"))
         ("h,help", "Show help message (you are reading it now)")
         ;
@@ -47,7 +48,8 @@ int main(int argc, char* argv[])
     
     
     // small max size for test purposes
-    DBEngine engine{EngineConfiguration(path, 100)};
+    EngineConfiguration conf{path, result["index"].as<int>(), 2};
+    DBEngine engine{std::move(conf)};
 
     SimpleSocketServer socket_server { result["port"].as<int>(), engine };
     socket_server.start_listening();

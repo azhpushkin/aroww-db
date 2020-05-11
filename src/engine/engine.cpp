@@ -17,8 +17,14 @@
 namespace fs = std::filesystem;
 
 #define DATA_SUBDIR "aroww-db"
-#define DUMP_MEMTABLE_SIZE_THRESHOLD 3
 #define MERGE_SEGMENTS_THRESHOLD 2
+
+
+EngineConfiguration::EngineConfiguration(fs::path p_, int m_, int is_)
+    : dir_path(p_), index_step(is_), max_segment_size(m_) {};
+
+int EngineConfiguration::DEFAULT_MAX_SEGMENT_SIZE = 1000;
+int EngineConfiguration::DEFAULT_INDEX_STEP = 4;
 
 
 DBEngine::DBEngine(EngineConfiguration conf_): conf(conf_) {
@@ -91,11 +97,11 @@ std::unique_ptr<Message> DBEngine::drop(std::string key)
 
 
 void DBEngine::switch_if_needed() {
-    if (current_memtable.size() < DUMP_MEMTABLE_SIZE_THRESHOLD) {
+    if (current_memtable.size() < conf.max_segment_size) {
         return;
     }
 
-    auto new_segment = Segment::dump_memtable(current_memtable, data_dir);
+    auto new_segment = Segment::dump_memtable(current_memtable, data_dir, conf.index_step);
     segments.push_front(new_segment);
     
     current_memtable.clear();
@@ -106,11 +112,11 @@ void DBEngine::switch_if_needed() {
     }
 
     std::vector<SegmentPtr> to_merge(segments.begin(), segments.end());
-    auto merged_segment = Segment::merge(to_merge);
+    auto merged_segment = Segment::merge(to_merge, conf.index_step);
     for (auto seg: segments) {
         fs::remove(seg->file_path);
     } 
-    
+
     segments.clear();
     segments.push_front(merged_segment);
 }

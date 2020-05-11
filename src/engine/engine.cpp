@@ -20,11 +20,11 @@ namespace fs = std::filesystem;
 #define MERGE_SEGMENTS_THRESHOLD 2
 
 
-EngineConfiguration::EngineConfiguration(fs::path p_, int m_, int is_)
-    : dir_path(p_), index_step(is_), max_segment_size(m_) {};
+EngineConfiguration::EngineConfiguration(fs::path p_, unsigned int m_, unsigned int is_)
+    : dir_path(p_), index_step(is_), max_segment_size(m_) {}
 
-int EngineConfiguration::DEFAULT_MAX_SEGMENT_SIZE = 1000;
-int EngineConfiguration::DEFAULT_INDEX_STEP = 4;
+unsigned int EngineConfiguration::DEFAULT_MAX_SEGMENT_SIZE = 1000;
+unsigned int EngineConfiguration::DEFAULT_INDEX_STEP = 4;
 
 
 DBEngine::DBEngine(EngineConfiguration conf_): conf(conf_) {

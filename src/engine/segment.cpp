@@ -66,7 +66,7 @@ std::optional<std::shared_ptr<Segment>> Segment::parse_path(fs::path path) {
 }
 
 
-std::shared_ptr<Segment> Segment::dump_memtable(MemTable& mtbl, fs::path dir, int index_step) {
+std::shared_ptr<Segment> Segment::dump_memtable(MemTable& mtbl, fs::path dir, unsigned int index_step) {
     int64_t timestamp = static_cast<int64_t>(time(NULL));
     int64_t total_size = static_cast<int64_t>(mtbl.size());
     int64_t index_size = static_cast<int64_t>(mtbl.size());  // same as total currently
@@ -80,14 +80,18 @@ std::shared_ptr<Segment> Segment::dump_memtable(MemTable& mtbl, fs::path dir, in
 
     SegmentIndex index;
 
-    // write contents, remember positions for index creation
+    auto index_i = index_step;
     for (auto pair: mtbl) {
-        auto pos = sstable.tellp();
+        if (index_i == index_step) {
+            auto pos = sstable.tellp();  // remember for index posi
+            index[pair.first] = pos;
+            index_i = 0;
+        } else {
+            index_i++;
+        }
         
         pack_string(sstable, pair.first);
-        pack_string_or_tomb(sstable, pair.second);
-
-        index[pair.first] = pos;
+        pack_string_or_tomb(sstable, pair.second);  
     }
 
     index_start_pos = sstable.tellp();
@@ -105,27 +109,40 @@ std::shared_ptr<Segment> Segment::dump_memtable(MemTable& mtbl, fs::path dir, in
 
 
 std::optional<std::variant<std::string, std::nullptr_t>> Segment::lookup(std::string key) {
+    std::vector<std::string> keys;
+    for (auto const& element : index) {
+        keys.push_back(element.first);
+    }
+
+    auto pos_iter = std::upper_bound(keys.begin(), keys.end(), key);
+    if (pos_iter == keys.begin()) {
+        return std::nullopt;  // not present, first item greater than key
+    }
+    pos_iter--;  // finded element is first greater -> so get prev to find value
+
     std::fstream sstable_file(file_path, SSTABLE_READ_MODE);
-    if (index.find(key) == index.end()) {
-        return std::nullopt;  // not present
-    }
-    int pos = index.at(key);
 
-    sstable_file.seekg(pos, sstable_file.beg);
-
-    std::string key_from_file;
-    std::optional<std::string> value;
-    unpack_string(sstable_file, key_from_file);
-    unpack_string_or_tomb(sstable_file, value);
-    if (value.has_value()) {
-        return value.value();
+    sstable_file.seekg(index[*pos_iter], sstable_file.beg);
+    while (sstable_file.tellg() != index_start) {
+        std::string key_from_file;
+        std::optional<std::string> value;
+        unpack_string(sstable_file, key_from_file);
+        unpack_string_or_tomb(sstable_file, value);
+        
+        if (key_from_file != key) {
+            continue;
+        }
+        if (value.has_value()) {
+            return value;
+        } else {
+            return nullptr;
+        }
     }
-    else {
-        return nullptr;
-    }
+    return std::nullopt;  // not found
+    
 }
 
-SegmentPtr Segment::merge(std::vector<SegmentPtr> segments, int index_step) {
+SegmentPtr Segment::merge(std::vector<SegmentPtr> segments, unsigned int index_step) {
     // Prepare data of new segment
     auto latest = segments.front();
     std::fstream target_sstable(
@@ -156,6 +173,7 @@ SegmentPtr Segment::merge(std::vector<SegmentPtr> segments, int index_step) {
     }
 
 
+    auto index_i = index_step;
     // 0 - needs to read a string, 1 - string is loaded, 2 - reached end
     while (reached_end != size) {
         // Load keys from all files if needed
@@ -185,8 +203,13 @@ SegmentPtr Segment::merge(std::vector<SegmentPtr> segments, int index_step) {
                 if (!loaded) {
                     loaded = true;
 
-                    auto pos = target_sstable.tellp();
-                    index[min_iter.value()] = pos;
+                    if (index_i == index_step) {
+                        auto pos = target_sstable.tellp();  // remember for index pos
+                        index[min_iter.value()] = pos;
+                        index_i = 0;
+                    } else {
+                        index_i++;
+                    }
                     
                     pack_string(target_sstable, min_iter.value());
                     pack_string_or_tomb(target_sstable, val);

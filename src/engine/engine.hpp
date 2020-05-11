@@ -24,7 +24,8 @@ struct memtablecomp {
 
 typedef std::map<std::string, std::optional<std::string>, memtablecomp> MemTable;
 typedef std::map<std::string, int64_t> SegmentIndex;
-class DBEngine;
+class Segment;
+typedef std::shared_ptr<Segment> SegmentPtr;
 
 class Segment {
 public:
@@ -35,8 +36,10 @@ public:
     int64_t index_start;
     
     Segment(fs::path d);
-    static std::optional<std::shared_ptr<Segment>> parse_path(fs::path);
-    static std::shared_ptr<Segment> dump_memtable(MemTable& mtbl, fs::path dir);
+
+    static std::optional<SegmentPtr> parse_path(fs::path);
+    static SegmentPtr dump_memtable(MemTable& mtbl, fs::path dir);
+    static SegmentPtr merge(std::vector<SegmentPtr>);
 
     std::optional<std::variant<std::string, std::nullptr_t>> lookup(std::string key);
 
@@ -44,8 +47,6 @@ private:
     SegmentIndex index;
 
 };
-
-typedef std::shared_ptr<Segment> SegmentPnt;
 
 
 
@@ -67,7 +68,7 @@ private:
     EngineConfiguration conf;
     fs::path data_dir;
     
-    std::list<SegmentPnt> segments;
+    std::list<SegmentPtr> segments;
 
     std::mutex write_file_mutex;
     MemTable current_memtable;

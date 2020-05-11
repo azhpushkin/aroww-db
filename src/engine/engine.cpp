@@ -6,6 +6,7 @@
 #include <regex>
 #include <filesystem>
 #include <fstream>
+#include <vector>
 #include <mutex>
 
 #include <fmt/format.h>
@@ -16,7 +17,8 @@
 namespace fs = std::filesystem;
 
 #define DATA_SUBDIR "aroww-db"
-#define DUMP_MEMTABLE_SIZE_THRESHOLD 2
+#define DUMP_MEMTABLE_SIZE_THRESHOLD 3
+#define MERGE_SEGMENTS_THRESHOLD 2
 
 
 DBEngine::DBEngine(EngineConfiguration conf_): conf(conf_) {
@@ -34,7 +36,7 @@ DBEngine::DBEngine(EngineConfiguration conf_): conf(conf_) {
     }
 
     // Sort in descending order, just like reads will behave
-    segments.sort([](SegmentPnt& l, SegmentPnt &r) { return l->timestamp > r->timestamp;});
+    segments.sort([](SegmentPtr& l, SegmentPtr &r) { return l->timestamp > r->timestamp;});
 }
 
 
@@ -89,7 +91,7 @@ std::unique_ptr<Message> DBEngine::drop(std::string key)
 
 
 void DBEngine::switch_if_needed() {
-    if (current_memtable.size() <= DUMP_MEMTABLE_SIZE_THRESHOLD) {
+    if (current_memtable.size() < DUMP_MEMTABLE_SIZE_THRESHOLD) {
         return;
     }
 
@@ -99,4 +101,12 @@ void DBEngine::switch_if_needed() {
     current_memtable.clear();
 
 
+    if (segments.size() < MERGE_SEGMENTS_THRESHOLD) {
+        return;
+    }
+
+    std::vector<SegmentPtr> to_merge(segments.begin(), segments.end());
+    auto merged_segment = Segment::merge(to_merge);
+    segments.clear();
+    segments.push_front(merged_segment);
 }

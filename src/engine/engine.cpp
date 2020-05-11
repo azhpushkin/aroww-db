@@ -107,6 +107,10 @@ void DBEngine::switch_if_needed() {
 
     std::vector<SegmentPtr> to_merge(segments.begin(), segments.end());
     auto merged_segment = Segment::merge(to_merge);
+    for (auto seg: segments) {
+        fs::remove(seg->file_path);
+    } 
+    
     segments.clear();
     segments.push_front(merged_segment);
 }

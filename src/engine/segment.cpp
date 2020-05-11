@@ -218,9 +218,4 @@ SegmentPtr Segment::merge(std::vector<SegmentPtr> segments) {
     target_sstable.close();
 
     return std::make_shared<Segment>(SSTABLE_PATH(latest->file_path.parent_path(), timestamp));
-
-
-
-
-
 }

@@ -37,7 +37,6 @@ public:
     
     Segment(fs::path d);
 
-    static std::optional<SegmentPtr> parse_path(fs::path);
     static SegmentPtr dump_memtable(MemTable& mtbl, fs::path dir, unsigned int index_step);
     static SegmentPtr merge(std::vector<SegmentPtr>, unsigned int index_step);
 
@@ -75,9 +74,10 @@ private:
     
     std::list<SegmentPtr> segments;
 
-    std::mutex write_file_mutex;
     MemTable current_memtable;
+    std::fstream memtable_file;
 
     void switch_if_needed();
+    void load_memtable(fs::path);
 };
 

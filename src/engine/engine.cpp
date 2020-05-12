@@ -12,6 +12,7 @@
 #include <fmt/format.h>
 
 #include "engine.hpp"
+#include "utils/serialization.hpp"
 
 
 namespace fs = std::filesystem;
@@ -26,6 +27,19 @@ EngineConfiguration::EngineConfiguration(fs::path p_, unsigned int m_, unsigned 
 unsigned int EngineConfiguration::DEFAULT_MAX_SEGMENT_SIZE = 1000;
 unsigned int EngineConfiguration::DEFAULT_INDEX_STEP = 4;
 
+void DBEngine::load_memtable(fs::path p) {
+    std::fstream memtable_path(p, std::ios::binary | std::ios::in);
+
+    while (memtable_path.peek() != EOF) {
+        std::string key;
+        std::optional<std::string> value;
+
+        unpack_string(memtable_path, key);
+        unpack_string_or_tomb(memtable_path, value);
+        current_memtable[key] = value;
+    }
+}
+
 
 DBEngine::DBEngine(EngineConfiguration conf_): conf(conf_) {
     data_dir = conf.dir_path / DATA_SUBDIR;
@@ -33,16 +47,26 @@ DBEngine::DBEngine(EngineConfiguration conf_): conf(conf_) {
     if (!fs::exists(data_dir)) {
         fs::create_directory(data_dir);
     } 
+    std::regex sstable_re(".*/[0-9]+.sstable");
+    std::regex memtable_re(".*memtable.txt");
+    
+    std::smatch match;
+    
     
     for(auto& p: fs::directory_iterator(data_dir)) {
-        auto segment = Segment::parse_path(p.path());
-        if (segment.has_value()) {
-            segments.push_back(segment.value());
+        std::string temp = p.path().string();
+        if(std::regex_match(temp, match, sstable_re)) {
+            segments.push_back(std::make_shared<Segment>(p.path()));
+        }
+        else if (std::regex_match(temp, match, memtable_re)) {
+            load_memtable(p.path());
         }
     }
 
     // Sort in descending order, just like reads will behave
     segments.sort([](SegmentPtr& l, SegmentPtr &r) { return l->timestamp > r->timestamp;});
+
+    memtable_file = std::fstream(data_dir / "memtable.txt", std::ios::binary | std::ios::app);
 }
 
 
@@ -81,16 +105,20 @@ std::unique_ptr<Message> DBEngine::get(std::string key)
 
 std::unique_ptr<Message> DBEngine::set(std::string key, std::string value)
 {
-    std::lock_guard<std::mutex> guard(write_file_mutex);
     current_memtable[key] = value;
+    pack_string(memtable_file, key);
+    pack_string_or_tomb(memtable_file, value);
+    memtable_file.flush();
     switch_if_needed();
     return std::make_unique<MsgUpdateOkResp>();
 }
 
 std::unique_ptr<Message> DBEngine::drop(std::string key)
 {
-    std::lock_guard<std::mutex> guard(write_file_mutex);
     current_memtable[key] = std::nullopt;
+    pack_string(memtable_file, key);
+    pack_string_or_tomb(memtable_file, std::nullopt);
+    memtable_file.flush();
     switch_if_needed();
     return std::make_unique<MsgUpdateOkResp>();
 }
@@ -105,6 +133,11 @@ void DBEngine::switch_if_needed() {
     segments.push_front(new_segment);
     
     current_memtable.clear();
+    memtable_file.close();
+    fs::remove(data_dir / "memtable.txt");
+
+
+    memtable_file = std::fstream(data_dir / "memtable.txt", std::ios::binary | std::ios::app);
 
 
     if (segments.size() < MERGE_SEGMENTS_THRESHOLD) {

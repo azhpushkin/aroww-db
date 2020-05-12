@@ -53,19 +53,6 @@ Segment::Segment(fs::path p): file_path(p) {
 }
 
 
-std::optional<std::shared_ptr<Segment>> Segment::parse_path(fs::path path) {
-    std::regex rx(".*/[0-9]+.sstable");
-    std::smatch match;
-    std::string temp = path.string();
-    
-    std::shared_ptr<Segment> segment;
-    if(!std::regex_match(temp, match, rx)) {
-        return std::nullopt;
-    }
-    return std::make_shared<Segment>(path);
-}
-
-
 std::shared_ptr<Segment> Segment::dump_memtable(MemTable& mtbl, fs::path dir, unsigned int index_step) {
     int64_t timestamp = static_cast<int64_t>(time(NULL));
     int64_t total_size = static_cast<int64_t>(mtbl.size());

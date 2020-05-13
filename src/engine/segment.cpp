@@ -67,9 +67,9 @@ std::shared_ptr<Segment> Segment::dump_memtable(MemTable& mtbl, fs::path dir, un
 
     SegmentIndex index;
 
-    auto index_i = index_step;
+    auto index_i = index_step - 1;
     for (auto pair: mtbl) {
-        if (index_i == index_step) {
+        if (index_i == index_step - 1) {
             auto pos = sstable.tellp();  // remember for index posi
             index[pair.first] = pos;
             index_i = 0;
@@ -87,7 +87,9 @@ std::shared_ptr<Segment> Segment::dump_memtable(MemTable& mtbl, fs::path dir, un
         pack_int64(sstable, pair.second);
     }
 
-    sstable.seekp(sizeof(int64_t) * 3, sstable.beg);
+    index_size = index.size();
+    sstable.seekp(sizeof(int64_t) * 2, sstable.beg);
+    pack_int64(sstable, index_size);  // write index len
     pack_int64(sstable, index_start_pos);  // write start of index
     sstable.close();
 

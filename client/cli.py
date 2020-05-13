@@ -3,10 +3,6 @@ import argparse
 from connection import ArowwDB, ArowwResult
 
 
-
-
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Connect to ArowwDB server')
     parser.add_argument('-H,--host', type=str, dest='host', default="localhost",
@@ -19,7 +15,6 @@ if __name__ == '__main__':
     
     
     db = ArowwDB(host=args.host, port=args.port)
-    
     
     get_re = re.compile(r'^get (?P<key>\S+)$') 
     set_re = re.compile(r'^set (?P<key>\S+) (?P<value>\S+)$') 

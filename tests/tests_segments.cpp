@@ -45,7 +45,7 @@ TEST_CASE( "dump_memtable" ) {
     
     auto index_step = GENERATE(as<unsigned int>{}, 1, 2, 3, 4);
 
-    auto dumped_seg = Segment::dump_memtable(memtable, TEMP_DIR, index_step);
+    auto dumped_seg = Segment::dump_memtable(memtable, TEMP_DIR, static_cast<int64_t>(index_step), index_step);
     // Re-create to make sure everything is correct if load from start
     auto reloaded_seg = std::make_shared<Segment>(dumped_seg->file_path);
 
@@ -79,5 +79,8 @@ TEST_CASE( "dump_memtable" ) {
     REQUIRE_NO_KEY(dumped_seg, "empty");
     REQUIRE_NO_KEY(reloaded_seg, "orl");
 }
+
+
+
 
 

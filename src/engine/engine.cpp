@@ -8,6 +8,7 @@
 #include <fstream>
 #include <vector>
 #include <mutex>
+#include <ctime>
 
 #include <fmt/format.h>
 
@@ -129,7 +130,8 @@ void DBEngine::switch_if_needed() {
         return;
     }
 
-    auto new_segment = Segment::dump_memtable(current_memtable, data_dir, conf.index_step);
+    int64_t timestamp = static_cast<int64_t>(time(NULL));
+    auto new_segment = Segment::dump_memtable(current_memtable, data_dir, timestamp, conf.index_step);
     segments.push_front(new_segment);
     
     current_memtable.clear();

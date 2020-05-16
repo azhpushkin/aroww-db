@@ -5,7 +5,6 @@
 #include <regex>
 #include <filesystem>
 #include <fstream>
-#include <ctime>
 #include <cstdint>
 #include <variant>
 
@@ -53,8 +52,7 @@ Segment::Segment(fs::path p): file_path(p) {
 }
 
 
-std::shared_ptr<Segment> Segment::dump_memtable(MemTable& mtbl, fs::path dir, unsigned int index_step) {
-    int64_t timestamp = static_cast<int64_t>(time(NULL));
+std::shared_ptr<Segment> Segment::dump_memtable(MemTable& mtbl, fs::path dir, int64_t timestamp, unsigned int index_step) {
     int64_t total_size = static_cast<int64_t>(mtbl.size());
     int64_t index_size = static_cast<int64_t>(mtbl.size());  // same as total currently
     int64_t index_start_pos = 0;  // filled later

@@ -1,4 +1,6 @@
 #include <thread>
+#include <mutex>
+
 
 #include "engine/interface.hpp"
 #include "network/messages.hpp"
@@ -21,14 +23,16 @@ private:
 };
 
 class SimpleSocketServer {
-private:
-    int port;
-
-    AbstractEngine& engine;
-
-    static void start_connection_thread(SimpleSocketServer* server, int* socket);
 public:
     SimpleSocketServer(int, AbstractEngine&);
     int start_listening();
+    void close();
+    std::mutex ready_mutex;
+private:
+    int port;
+    bool close_scheduled;
 
+    AbstractEngine& engine;
+    
+    static void start_connection_thread(SimpleSocketServer* server, int* socket);
 };

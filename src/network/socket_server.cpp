@@ -2,6 +2,7 @@
 #include <cerrno>
 #include <cstring>
 #include <sys/socket.h>
+#include <poll.h>
 
 #define SPDLOG_FMT_EXTERNAL 1
 #include "spdlog/spdlog.h"
@@ -15,8 +16,13 @@
 
 SimpleSocketServer::SimpleSocketServer(int port_, AbstractEngine& engine_)
 : port(port_),
+  close_scheduled(false),
   engine(engine_)
-{}
+  {
+      ready_mutex.lock();
+  }
+
+void SimpleSocketServer::close() { close_scheduled = true; }
 
 
 int SimpleSocketServer::start_listening()
@@ -53,13 +59,29 @@ int SimpleSocketServer::start_listening()
 
     std::vector<RunningConnection> connections;
 
-    while (1) { /* main accept() loop */
-        sin_size = sizeof(struct sockaddr_in);
-        if ((new_fd = accept(sockfd, (struct sockaddr*)&their_addr, &sin_size)) == -1) {
-            perror("accept");
-            continue;
+    struct pollfd *pfds = (struct pollfd *)malloc(sizeof(*pfds) * 1);
+    pfds[0].fd = sockfd;
+    pfds[0].events = POLLIN;
+
+
+    ready_mutex.unlock();
+    while (!close_scheduled) { /* main accept() loop */
+        int poll_count = poll(pfds, 1, 1000);  // 1000 ms
+        if (poll_count == -1) {
+            perror("poll");
+            return 1;
         }
-        spdlog::info("New connection from {}, binding to {}", inet_ntoa(their_addr.sin_addr), new_fd);
-        connections.emplace_back(new_fd, engine);
+
+        if (pfds[0].revents && POLLIN) {
+            sin_size = sizeof(struct sockaddr_in);
+            new_fd = accept(sockfd, (struct sockaddr*)&their_addr, &sin_size);
+            if (new_fd == -1) {
+                perror("accept");
+            } else {
+                spdlog::info("New connection from {}, binding to {}", inet_ntoa(their_addr.sin_addr), new_fd);
+                connections.emplace_back(new_fd, engine);
+            }
+        }
     }
+    return 0;
 }

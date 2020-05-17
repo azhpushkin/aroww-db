@@ -1,6 +1,7 @@
 #include <cerrno>
 #include <sys/socket.h>
 #include <string>
+#include <poll.h>
 
 #include <thread>
 
@@ -15,7 +16,12 @@
 RunningConnection::RunningConnection(int socket_, AbstractEngine& engine_)
     : socket(socket_ ), engine(engine_)
 {
+    close_scheduled = false;
     th = std::thread(&RunningConnection::start, this);
+}
+void RunningConnection::close_conn() {
+    close_scheduled = false;
+    th.join();
 }
 
 void RunningConnection::start() {
@@ -23,8 +29,22 @@ void RunningConnection::start() {
     std::string output;
     int bytes_read;
 
+    struct pollfd *pfds = (struct pollfd *)malloc(sizeof(*pfds) * 1);
+    pfds[0].fd = socket;
+    pfds[0].events = POLLIN;
+    
     spdlog::info(">> {}: thread started", socket);
-    while (1) {
+    while (!close_scheduled) {
+        int poll_count = poll(pfds, 1, 1000);  // 1000 ms
+        if (poll_count == -1) {
+            perror("poll");
+            break;
+        }
+
+        if (poll_count == 0) {
+            continue;  // timeout
+        }
+
         bytes_read = recv(socket, buffer, 512, 0);
         if (bytes_read == 0) {
             spdlog::info(">> {}: connection closed", socket);

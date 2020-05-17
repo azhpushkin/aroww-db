@@ -83,5 +83,8 @@ int SimpleSocketServer::start_listening()
             }
         }
     }
+    for (auto& conn: connections) {
+        conn.close_conn();
+    }
     return 0;
 }

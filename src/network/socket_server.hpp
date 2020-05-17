@@ -9,10 +9,12 @@
 class RunningConnection {
 public:
     RunningConnection(int, AbstractEngine&);
+    void close_conn();
 private:
     int socket;
     AbstractEngine& engine;
     std::thread th;
+    bool close_scheduled;
 
     void start();
     std::unique_ptr<Message> process_message(std::unique_ptr<Message>);

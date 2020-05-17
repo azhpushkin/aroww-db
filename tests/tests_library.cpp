@@ -16,22 +16,22 @@ public:
     std::unique_ptr<Message> next_response;
     
     std::unique_ptr<Message> get(std::string key) {
-        // MsgGetReq msg;
-        // msg.key = key;
-        // received.emplace_back(msg);
+        auto msg = std::make_unique<MsgGetReq>();
+        msg->key = key;
+        received.push_back(std::move(msg));
         return std::move(next_response);
     }
     std::unique_ptr<Message> set(std::string key, std::string value) {
-        // MsgSetReq msg;
-        // msg.key = key;
-        // msg.value = value;
-        // received.emplace_back(msg);
+        auto msg = std::make_unique<MsgSetReq>();
+        msg->key = key;
+        msg->value = value;
+        received.push_back(std::move(msg));
         return std::move(next_response);
     }
     std::unique_ptr<Message> drop(std::string key) {
-        // MsgDropReq msg;
-        // msg.key = key;
-        // received.emplace_back(msg);
+        auto msg = std::make_unique<MsgDropReq>();
+        msg->key = key;
+        received.push_back(std::move(msg));
         return std::move(next_response);
     }
 };
@@ -63,20 +63,35 @@ TEST_CASE( "Send and receive some messages" ) {
     ArowwResult* res;
     
     // Set value and check response
-    server.engine.next_response = std::make_unique<MsgUpdateOkResp>();;
-    res = aroww_set(db, "first", "value");
-    REQUIRE(res->is_ok == true);
-    aroww_free_result(res);
+    {
+        server.engine.next_response = std::make_unique<MsgUpdateOkResp>();;
+        res = aroww_set(db, "first", "value\n\n\t\t");
+        REQUIRE(res->is_ok == true);
+        aroww_free_result(res);
+
+        auto p = dynamic_cast<MsgSetReq*>(server.engine.received[0].get());
+        REQUIRE(p != nullptr);
+        REQUIRE(p->key == "first");
+        REQUIRE(p->value == "value\n\n\t\t");
+    }
     
+    
+    // Get value
+    {
+        auto next2 = std::make_unique<MsgGetOkResp>();
+        next2->val = "Hey there!";
+        server.engine.next_response = std::move(next2);
 
-    auto next2 = std::make_unique<MsgGetOkResp>();
-    next2->val = "Hey there!";
-    server.engine.next_response = std::move(next2);
+        res = aroww_get(db, "first");
+        REQUIRE(res->is_ok == true);
+        REQUIRE(std::string(res->value) == "Hey there!");
+        aroww_free_result(res);
 
-    res = aroww_get(db, "first");
-    REQUIRE(res->is_ok == true);
-    REQUIRE(std::string(res->value) == "Hey there!");
-    aroww_free_result(res);
+        auto p = dynamic_cast<MsgGetReq*>(server.engine.received[1].get());
+        REQUIRE(p != nullptr);
+        REQUIRE(p->key == "first");
+    }
+    
 
     aroww_close(db);
 }

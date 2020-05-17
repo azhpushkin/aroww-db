@@ -93,8 +93,6 @@ TEST_CASE( "dump_memtable" ) {
 
 
 
-
-
 TEST_CASE( "merge segments " ) {
     MemTable memtable1;
     memtable1["zero"] = random_string(20);

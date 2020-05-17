@@ -48,7 +48,10 @@ int main(int argc, char* argv[])
     
     
     // small max size for test purposes
-    EngineConfiguration conf{path, result["index"].as<unsigned int>(), 2};
+    EngineConfiguration conf{path};
+    conf.index_step = result["index"].as<unsigned int>();
+    conf.max_segment_size = result["index"].as<unsigned int>();
+    conf.max_segment_size = result["index"].as<unsigned int>();
     DBEngine engine{std::move(conf)};
 
     SimpleSocketServer socket_server { result["port"].as<int>(), engine };

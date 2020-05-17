@@ -54,11 +54,14 @@ public:
     fs::path dir_path;
     unsigned int index_step;
     unsigned int max_segment_size;
+    unsigned int merge_segments_threshold;
 
-    EngineConfiguration(fs::path dir, unsigned int index_step, unsigned int max_segment_size);
+    EngineConfiguration(fs::path dir);
 
-    static unsigned int DEFAULT_MAX_SEGMENT_SIZE;
     static unsigned int DEFAULT_INDEX_STEP;
+    static unsigned int DEFAULT_MAX_SEGMENT_SIZE;
+    static unsigned int DEFAULT_MERGE_SEGMENTS_THRESHOLD;
+    
 };
 
 

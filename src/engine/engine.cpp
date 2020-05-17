@@ -22,11 +22,18 @@ namespace fs = std::filesystem;
 #define MERGE_SEGMENTS_THRESHOLD 2
 
 
-EngineConfiguration::EngineConfiguration(fs::path p_, unsigned int m_, unsigned int is_)
-    : dir_path(p_), index_step(is_), max_segment_size(m_) {}
-
-unsigned int EngineConfiguration::DEFAULT_MAX_SEGMENT_SIZE = 1000;
 unsigned int EngineConfiguration::DEFAULT_INDEX_STEP = 4;
+unsigned int EngineConfiguration::DEFAULT_MAX_SEGMENT_SIZE = 1000;
+unsigned int EngineConfiguration::DEFAULT_MERGE_SEGMENTS_THRESHOLD = 3;
+
+
+EngineConfiguration::EngineConfiguration(fs::path p_) : dir_path(p_) {
+    index_step = DEFAULT_INDEX_STEP;
+    max_segment_size = DEFAULT_MAX_SEGMENT_SIZE;
+    merge_segments_threshold = DEFAULT_MERGE_SEGMENTS_THRESHOLD;
+}
+
+
 
 void DBEngine::load_memtable(fs::path p) {
     std::fstream memtable_path(p, std::ios::binary | std::ios::in);

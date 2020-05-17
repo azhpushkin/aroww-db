@@ -130,6 +130,9 @@ std::optional<std::variant<std::string, std::nullptr_t>> Segment::lookup(std::st
 }
 
 SegmentPtr Segment::merge(std::vector<SegmentPtr> segments, unsigned int index_step) {
+    // Ensure order is correct -> latest comes first
+    sort(segments.begin(), segments.end(), [](SegmentPtr& l, SegmentPtr &r) { return l->timestamp > r->timestamp;});
+
     // Prepare data of new segment
     auto latest = segments.front();
     std::fstream target_sstable(

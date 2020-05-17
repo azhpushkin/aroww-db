@@ -1,6 +1,7 @@
+#include <thread>
+#include <vector>
 #include <string>
 #include <iostream>
-#include <thread>
 
 #include "catch2/catch.hpp"
 
@@ -9,49 +10,73 @@
 #include "lib/aroww.hpp"
 
 
-class TestEngine: public AbstractEngine {
+class DummyTestEngine: public AbstractEngine {
+public:
+    std::vector<std::unique_ptr<Message>> received;
+    std::unique_ptr<Message> next_response;
+    
     std::unique_ptr<Message> get(std::string key) {
-        // std::cout << "Got GET" << std::endl;
-        return std::make_unique<MsgGetMissingResp>();
+        // MsgGetReq msg;
+        // msg.key = key;
+        // received.emplace_back(msg);
+        return std::move(next_response);
     }
     std::unique_ptr<Message> set(std::string key, std::string value) {
-        // std::cout << "Got SET" << std::endl;
-        return std::make_unique<MsgGetMissingResp>();
+        // MsgSetReq msg;
+        // msg.key = key;
+        // msg.value = value;
+        // received.emplace_back(msg);
+        return std::move(next_response);
     }
     std::unique_ptr<Message> drop(std::string key) {
-        // std::cout << "Got DROP" << std::endl;
-        return std::make_unique<MsgGetMissingResp>();
+        // MsgDropReq msg;
+        // msg.key = key;
+        // received.emplace_back(msg);
+        return std::move(next_response);
     }
 };
 
 
-class TestServerFixture {
-protected:
-    TestEngine engine;
+class TestServer {
+public:
+    DummyTestEngine engine;
     SimpleSocketServer* _socket_server;
     std::thread _server_thread;
-    
-public:
-    TestServerFixture() {
+    TestServer() {
+        engine.next_response = nullptr;
+
         _socket_server = new SimpleSocketServer(7333, engine);
         _server_thread = std::thread(&SimpleSocketServer::start_listening, _socket_server);
         _socket_server->ready_mutex.lock();
     }
-    ~TestServerFixture() {
+    ~TestServer() {
         _socket_server->close();
         _server_thread.join();  // wait until closed
     }
 };
 
 
-TEST_CASE_METHOD( TestServerFixture, "Send and receive some messages" ) {
+TEST_CASE( "Send and receive some messages" ) {
+    TestServer server;
+
     ArowwDB* db = aroww_init("localhost", "7333");
-
-    auto res = aroww_set(db, "first", "value");
+    ArowwResult* res;
+    
+    // Set value and check response
+    server.engine.next_response = std::make_unique<MsgUpdateOkResp>();;
+    res = aroww_set(db, "first", "value");
+    REQUIRE(res->is_ok == true);
     aroww_free_result(res);
+    
 
-    auto res2 = aroww_get(db, "first");
-    aroww_free_result(res2);
+    auto next2 = std::make_unique<MsgGetOkResp>();
+    next2->val = "Hey there!";
+    server.engine.next_response = std::move(next2);
+
+    res = aroww_get(db, "first");
+    REQUIRE(res->is_ok == true);
+    REQUIRE(std::string(res->value) == "Hey there!");
+    aroww_free_result(res);
 
     aroww_close(db);
 }

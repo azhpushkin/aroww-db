@@ -20,7 +20,7 @@ RunningConnection::RunningConnection(int socket_, AbstractEngine& engine_)
     th = std::thread(&RunningConnection::start, this);
 }
 void RunningConnection::close_conn() {
-    close_scheduled = false;
+    close_scheduled = true;
     th.join();
 }
 

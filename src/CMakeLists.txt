@@ -8,6 +8,7 @@ set(DIR_PATH ${CMAKE_BINARY_DIR})
 set(SOURCES
     engine/engine.cpp
     engine/segment.cpp
+    engine/workers.cpp
     network/socket_server.cpp
     network/connection.cpp
     network/messages.cpp

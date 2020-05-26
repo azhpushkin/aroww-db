@@ -10,7 +10,7 @@
 
 #include <fmt/format.h>
 
-#include "engine.hpp"
+#include "segment.hpp"
 #include "utils/serialization.hpp"
 
 
@@ -19,6 +19,24 @@
 #define SSTABLE_READ_MODE std::ios::binary | std::ios::in
 
 namespace fs = std::filesystem;
+
+MemTable load_memtable(fs::path p) {
+    MemTable table; 
+    std::fstream memtable_path(p, std::ios::binary | std::ios::in);
+
+    while (memtable_path.peek() != EOF) {
+        std::string key;
+        std::optional<std::string> value;
+
+        unpack_string(memtable_path, key);
+        unpack_string_or_tomb(memtable_path, value);
+        table[key] = value;
+    }
+
+    return table;
+}
+
+
 /* 
 * ## Structure of segment file:
 * 8 bytes -> timestamp

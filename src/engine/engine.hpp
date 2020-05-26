@@ -10,57 +10,34 @@
 #include <mutex>
 #include <optional>
 #include <variant>
+#include <vector>
+
+#include "workers.fwd.hpp"
+#include "engine.fwd.hpp"
 
 #include "interface.hpp"
+#include "segment.hpp"
+#include "workers.hpp"
+
 #include "network/messages.hpp"
-
-
-namespace fs = std::filesystem;
-
-struct memtablecomp {
-  bool operator() (const std::string& lhs, const std::string& rhs) const
-  {return lhs<rhs;}
-};
-
-typedef std::map<std::string, std::optional<std::string>, memtablecomp> MemTable;
-typedef std::map<std::string, int64_t> SegmentIndex;
-class Segment;
-typedef std::shared_ptr<Segment> SegmentPtr;
-
-class Segment {
-public:
-    fs::path file_path;
-    std::int64_t timestamp;  // timestamp, used for ordering
-    std::int64_t keys_amount;
-    std::int64_t indexed_keys_amount;
-    int64_t index_start;
-    
-    Segment(fs::path d);
-
-    static SegmentPtr dump_memtable(MemTable& mtbl, fs::path dir, int64_t timestamp, unsigned int index_step);
-    static SegmentPtr merge(std::vector<SegmentPtr>, unsigned int index_step);
-
-    std::optional<std::variant<std::string, std::nullptr_t>> lookup(std::string key);
-
-private:
-    SegmentIndex index;
-
-};
-
 
 
 class EngineConfiguration {
 public:
     fs::path dir_path;
-    unsigned int index_step;
-    unsigned int max_segment_size;
-    unsigned int merge_segments_threshold;
+    unsigned int index_step;  // Index each X elements
+    unsigned int max_segment_size;  //  Max amount of keys in single segment
+    unsigned int merge_segments_threshold;  // Threshold before segments merge
+    
+    unsigned int read_workers;  // Amount of worker threads for GET
+    // NOTE: there is always just one worker for writing (SET, DROP)
 
     EngineConfiguration(fs::path dir);
 
     static unsigned int DEFAULT_INDEX_STEP;
     static unsigned int DEFAULT_MAX_SEGMENT_SIZE;
     static unsigned int DEFAULT_MERGE_SEGMENTS_THRESHOLD;
+    static unsigned int DEFAULT_READ_WORKERS;
     
 };
 
@@ -73,14 +50,16 @@ public:
     std::unique_ptr<Message> drop(std::string key);
 private:
     EngineConfiguration conf;
-    fs::path data_dir;
+    std::shared_ptr<ReadQueue> read_queue;
+    std::vector<ReadWorker> read_workers;
     
     std::list<SegmentPtr> segments;
 
     MemTable current_memtable;
     std::fstream memtable_file;
 
+
     void switch_if_needed();
-    void load_memtable(fs::path);
+    friend class ReadWorker;
 };
 

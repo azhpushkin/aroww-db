@@ -49,6 +49,7 @@ DBEngine::DBEngine(EngineConfiguration conf_): conf(conf_) {
     std::regex memtable_re(".*memtable.txt");
     
     std::smatch match;
+    read_queue = std::make_shared<ReadQueue>();
     
     
     for(auto& p: fs::directory_iterator(DATA_DIR(conf))) {
@@ -67,11 +68,11 @@ DBEngine::DBEngine(EngineConfiguration conf_): conf(conf_) {
     memtable_file = std::fstream(DATA_DIR(conf) / "memtable.txt", std::ios::binary | std::ios::app);
 
     for(unsigned int i = 0; i < conf.read_workers; i++) {
-        read_workers.emplace_back(*this, read_queue);
+        auto worker = std::make_shared<ReadWorker>(this, read_queue);
+        read_workers.push_back(worker);
+        new std::thread(&ReadWorker::start, worker.get());
     }
-    for(auto worker: read_workers) {
-        std::thread(&ReadWorker::start, &worker);
-    }
+
 }
 
 

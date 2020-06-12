@@ -51,7 +51,7 @@ public:
 private:
     EngineConfiguration conf;
     std::shared_ptr<ReadQueue> read_queue;
-    std::vector<ReadWorker> read_workers;
+    std::vector<std::shared_ptr<ReadWorker>> read_workers;
     
     std::list<SegmentPtr> segments;
 

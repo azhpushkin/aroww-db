@@ -37,11 +37,11 @@ private:
 
 class ReadWorker {
 public:
-    ReadWorker(DBEngine& engine, std::shared_ptr<ReadQueue> q);
-    void start();
+    ReadWorker(DBEngine* engine, std::shared_ptr<ReadQueue> q);
+    static void start(ReadWorker* worker);
 
 private:
-    DBEngine& engine;
+    DBEngine* engine;
     std::shared_ptr<ReadQueue> read_queue;
 
     std::unique_ptr<Message> lookup(std::string key);

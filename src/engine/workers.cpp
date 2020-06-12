@@ -7,7 +7,7 @@
 
 ReadTask::ReadTask(std::string key_): key(key_), msg(nullptr), cv(), m() {}
 ReadQueue::ReadQueue(): q(), m(), c() {}
-ReadWorker::ReadWorker(DBEngine& engine_, std::shared_ptr<ReadQueue> q_): engine(engine_), read_queue(q_) {}
+ReadWorker::ReadWorker(DBEngine* engine_, std::shared_ptr<ReadQueue> q_): engine(engine_), read_queue(q_) {}
 
 void ReadQueue::push(std::shared_ptr<ReadTask> task) {
     std::unique_lock<std::mutex> lock(m);
@@ -23,13 +23,13 @@ std::shared_ptr<ReadTask> ReadQueue::pop() {
 }
 
 
-void ReadWorker::start() {
+void ReadWorker::start(ReadWorker* worker) {
     while(true) {
-        auto task = read_queue->pop();
+        auto task = worker->read_queue->pop();
 
         {
             std::unique_lock<std::mutex> lock(task->m);
-            auto res = lookup(task->key);
+            auto res = worker->lookup(task->key);
 
             task->msg = std::move(res);
             task->cv.notify_all();
@@ -38,8 +38,8 @@ void ReadWorker::start() {
 }
 
 std::unique_ptr<Message> ReadWorker::lookup(std::string key) {
-    if (engine.current_memtable.find(key) != engine.current_memtable.end()) {
-        auto val = engine.current_memtable.at(key);
+    if (engine->current_memtable.find(key) != engine->current_memtable.end()) {
+        auto val = engine->current_memtable.at(key);
         if (val.has_value()) {
             auto resp = std::make_unique<MsgGetOkResp>();
             resp->val = val.value();
@@ -50,7 +50,7 @@ std::unique_ptr<Message> ReadWorker::lookup(std::string key) {
         }
     }
 
-    for (auto s: engine.segments) {
+    for (auto s: engine->segments) {
         auto res = s->lookup(key);
         if (!res.has_value()) {
             continue;

@@ -31,9 +31,9 @@ void aroww_close(ArowwDB* db) {
 }
 
 
-ArowwResult* aroww_get(ArowwDB* db, char* key) {
+ArowwResult* aroww_get(ArowwDB* db, char* key, int keyl) {
 	MsgGetReq msg;
-	msg.key = std::string(key);
+	msg.key = std::string(key, keyl);
 
 	auto packed = msg.pack_message();
 	send(db->socket_fd, packed.c_str(), packed.size(), 0);
@@ -42,10 +42,10 @@ ArowwResult* aroww_get(ArowwDB* db, char* key) {
 }
 
 
-ArowwResult* aroww_set(ArowwDB* db, char* key, char* value) {
+ArowwResult* aroww_set(ArowwDB* db, char* key, int keyl, char* value, int valuel) {
 	MsgSetReq msg;
-	msg.key = std::string(key);
-	msg.value = std::string(value);
+	msg.key = std::string(key, keyl);
+	msg.value = std::string(value, valuel);
 
 	auto packed = msg.pack_message();
 	send(db->socket_fd, packed.c_str(), packed.size(), 0);
@@ -53,9 +53,9 @@ ArowwResult* aroww_set(ArowwDB* db, char* key, char* value) {
     return get_result(db);
 }
 
-ArowwResult* aroww_drop(ArowwDB* db, char* key) {
+ArowwResult* aroww_drop(ArowwDB* db, char* key, int keyl) {
 	MsgDropReq msg;
-	msg.key = std::string(key);
+	msg.key = std::string(key, keyl);
 
 	auto packed = msg.pack_message();
 	send(db->socket_fd, packed.c_str(), packed.size(), 0);

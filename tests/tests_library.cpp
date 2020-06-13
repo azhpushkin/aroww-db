@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <cstring>
 
 #include "catch2/catch.hpp"
 
@@ -61,11 +62,13 @@ TEST_CASE( "Send and receive some messages" ) {
 
     ArowwDB* db = aroww_init("localhost", "7333");
     ArowwResult* res;
+    char* first = strdup("first");
+    char* with_whitespaces = strdup("value\n\n\t\t");
     
     // Set value and check response
     {
-        server.engine.next_response = std::make_unique<MsgUpdateOkResp>();;
-        res = aroww_set(db, "first", "value\n\n\t\t");
+        server.engine.next_response = std::make_unique<MsgUpdateOkResp>();
+        res = aroww_set(db, first, strlen(first), with_whitespaces, strlen(with_whitespaces));
         REQUIRE(res->is_ok == true);
         aroww_free_result(res);
 
@@ -82,7 +85,7 @@ TEST_CASE( "Send and receive some messages" ) {
         next2->val = "Hey there!";
         server.engine.next_response = std::move(next2);
 
-        res = aroww_get(db, "first");
+        res = aroww_get(db, first, strlen(first));
         REQUIRE(res->is_ok == true);
         REQUIRE(std::string(res->value) == "Hey there!");
         aroww_free_result(res);

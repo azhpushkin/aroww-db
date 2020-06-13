@@ -6,7 +6,7 @@ include_directories(PUBLIC ${PROJECT_SOURCE_DIR}/src)
 # CXX compiler settings
 # set(CMAKE_CXX_COMPILER /bin/clang++)
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wextra -Wpedantic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wextra -Wpedantic -fdiagnostics-color=always")
 
 # threads
 set(THREADS_PREFER_PTHREAD_FLAG ON)

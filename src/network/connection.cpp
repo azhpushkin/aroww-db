@@ -2,15 +2,12 @@
 #include <sys/socket.h>
 #include <string>
 #include <poll.h>
-
 #include <thread>
-
-#define SPDLOG_FMT_EXTERNAL 1
-#include "spdlog/spdlog.h"
 
 #include "socket_server.hpp"
 #include "engine/interface.hpp"
 #include "network/messages.hpp"
+#include "utils/logger.hpp"
 
 
 RunningConnection::RunningConnection(int socket_, AbstractEngine& engine_)
@@ -33,7 +30,7 @@ void RunningConnection::start() {
     pfds[0].fd = socket;
     pfds[0].events = POLLIN;
     
-    spdlog::info(">> {}: thread started", socket);
+    log_debug(">> {}: thread started", socket);
     while (!close_scheduled) {
         int poll_count = poll(pfds, 1, 1000);  // 1000 ms
         if (poll_count == -1) {
@@ -47,7 +44,7 @@ void RunningConnection::start() {
 
         bytes_read = recv(socket, buffer, 512, 0);
         if (bytes_read == 0) {
-            spdlog::info(">> {}: connection closed", socket);
+            log_debug(">> {}: connection closed", socket);
             break;
         }
         if (bytes_read == -1) {
@@ -56,7 +53,7 @@ void RunningConnection::start() {
         }
         
         auto req = Message::unpack_message(std::move(std::string(buffer, bytes_read)));
-        spdlog::info(">> {}: received command: {}", socket, req->get_flag());
+        log_debug(">> {}: received command: {}", socket, req->get_flag());
         
 
         std::unique_ptr<Message> resp;
@@ -73,7 +70,7 @@ void RunningConnection::start() {
         }
 
         std::string resp_buf = resp->pack_message();
-        spdlog::info(">> {}: Sending back: {}", socket, resp->get_flag());
+        log_debug(">> {}: Sending back: {}", socket, resp->get_flag());
 
         send(socket, resp_buf.c_str(), resp_buf.size(), 0);
     }

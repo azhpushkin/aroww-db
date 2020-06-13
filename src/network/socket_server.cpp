@@ -4,11 +4,9 @@
 #include <sys/socket.h>
 #include <poll.h>
 
-#define SPDLOG_FMT_EXTERNAL 1
-#include "spdlog/spdlog.h"
-
 #include "socket_server.hpp"
 #include "engine/interface.hpp"
+#include "utils/logger.hpp"
 
 
 #define BACKLOG 10
@@ -55,7 +53,7 @@ int SimpleSocketServer::start_listening()
         return 1;
     }
 
-    spdlog::info("Server started, listening on {}", port);
+    log_debug("Server started, listening on {}", port);
 
     std::vector<RunningConnection> connections;
 
@@ -78,7 +76,7 @@ int SimpleSocketServer::start_listening()
             if (new_fd == -1) {
                 perror("accept");
             } else {
-                spdlog::info("New connection from {}, binding to {}", inet_ntoa(their_addr.sin_addr), new_fd);
+                log_debug("New connection from {}, binding to {}", inet_ntoa(their_addr.sin_addr), new_fd);
                 connections.emplace_back(new_fd, engine);
             }
         }

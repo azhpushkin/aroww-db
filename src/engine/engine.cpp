@@ -11,8 +11,6 @@
 #include <mutex>
 #include <ctime>
 
-#include <fmt/format.h>
-
 #include "engine.hpp"
 #include "segment.hpp"
 #include "workers.hpp"

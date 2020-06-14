@@ -120,18 +120,4 @@ void DBEngine::switch_if_needed() {
 
 
     memtable_file = std::fstream(DATA_DIR(conf) / "memtable.txt", std::ios::binary | std::ios::app);
-
-
-    // if (segments.size() < MERGE_SEGMENTS_THRESHOLD) {
-    //     return;
-    // }
-
-    // std::vector<SegmentPtr> to_merge(segments.begin(), segments.end());
-    // auto merged_segment = Segment::merge(to_merge, conf.index_step);
-    // for (auto seg: segments) {
-    //     fs::remove(seg->file_path);
-    // } 
-
-    // segments.clear();
-    // segments.push_front(merged_segment);
 }

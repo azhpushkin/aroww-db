@@ -39,7 +39,6 @@ public:
     Segment(fs::path d);
 
     static SegmentPtr dump_memtable(MemTable& mtbl, fs::path dir, int64_t timestamp, unsigned int index_step);
-    // static SegmentPtr merge(std::vector<SegmentPtr>, unsigned int index_step);
 
     std::optional<string_or_tomb> lookup(std::string key);
 

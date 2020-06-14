@@ -1,5 +1,4 @@
 #include <thread>
-#include <vector>
 #include <string>
 #include <iostream>
 #include <cstring>
@@ -9,6 +8,7 @@
 #include "catch2/catch.hpp"
 
 #include "common/messages.hpp"
+#include "common/string_or_tomb.hpp"
 #include "network/socket_server.hpp"
 #include "engine/interface.hpp"
 #include "lib/aroww.hpp"
@@ -26,19 +26,19 @@ public:
 
 class DummyTestEngine: public AbstractEngine {
 public:
-    std::vector<Call> received;
+    std::unique_ptr<Call> last_received;
     std::unique_ptr<Message> next_response;
     
     std::unique_ptr<Message> get(std::string key) {
-        received.emplace_back("get", key, std::nullopt);
+        last_received = std::unique_ptr<Call>(new Call("get", key, std::nullopt));
         return std::move(next_response);
     }
     std::unique_ptr<Message> set(std::string key, std::string value) {
-        received.emplace_back("set", key, value);
+        last_received = std::unique_ptr<Call>(new Call("set", key, value));
         return std::move(next_response);
     }
     std::unique_ptr<Message> drop(std::string key) {
-        received.emplace_back("drop", key, tomb::create());
+        last_received = std::unique_ptr<Call>(new Call("drop", key, tomb::create()));
         return std::move(next_response);
     }
 };
@@ -51,6 +51,7 @@ public:
     std::thread _server_thread;
     TestServer() {
         engine.next_response = nullptr;
+        engine.last_received = nullptr;
 
         _socket_server = std::make_unique<SimpleSocketServer>(7333, engine);
         _server_thread = std::thread(&SimpleSocketServer::start_listening, _socket_server.get());
@@ -64,39 +65,67 @@ public:
 };
 
 
-TEST_CASE( "Send and receive some messages" ) {
+TEST_CASE( "Basic commands " ) {
     TestServer server;
-
-    ArowwDB db{"localhost", "7333"};
+    Aroww::ArowwDB db{"localhost", "7333"};
     
-    // Set value and check response
-    {
+    SECTION ("Simple SET") {
         server.engine.next_response = std::make_unique<MessageSetResponse>();
-        auto resp = db.set("first", "some\n\t\0  key \0\n"s);
-        REQUIRE(resp->get_flag() == SET_RESP);
+        db.set("first", "some\n\t\0  key \0\n"s);
 
-        Call p = server.engine.received[0];
-        REQUIRE(p.type == "set");
-        REQUIRE(p.key == "first");
-        REQUIRE(std::get<std::string>(p.value.value()) == "some\n\t\0  key \0\n"s);
+        auto received = server.engine.last_received.get();
+        REQUIRE(received->type == "set");
+        REQUIRE(received->key == "first");
+        REQUIRE(std::get<std::string>(received->value.value()) == "some\n\t\0  key \0\n"s);
     }
-    
-    
-    // Get value
-    {
+
+    SECTION ("Simple DROP") {
+        server.engine.next_response = std::make_unique<MessageSetResponse>();
+        db.drop("value_to_drop");
+
+        auto received = server.engine.last_received.get();
+        REQUIRE(received->type == "drop");
+        REQUIRE(received->key == "value_to_drop");
+    }
+
+    SECTION ("Simple GET with return value") {
         MessageGetResponse* msg = new MessageGetResponse();
         msg->value = "Hey there!";
         server.engine.next_response = std::unique_ptr<Message>(msg);
         
         auto resp = db.get("");
-        REQUIRE(resp->get_flag() == GET_RESP);
-        auto resp_casted = dynamic_cast<MessageGetResponse*>(resp.get());
-        REQUIRE(std::get<std::string>(resp_casted->value) == "Hey there!");
+        REQUIRE(resp.has_value());
+        REQUIRE(resp.value() == "Hey there!");
 
-        Call p = server.engine.received[1];
-        REQUIRE(p.type == "get");
-        REQUIRE(p.key == "");
+        auto received = server.engine.last_received.get();
+        REQUIRE(received->type == "get");
+        REQUIRE(received->key == "");
+    }
 
+    SECTION ("Simple GET for missing key ") {
+        MessageGetResponse* msg = new MessageGetResponse();
+        msg->value = tomb::create();
+        server.engine.next_response = std::unique_ptr<Message>(msg);
+        
+        auto resp = db.get("missing_key");
+        REQUIRE(!resp.has_value());
+
+        auto received = server.engine.last_received.get();
+        REQUIRE(received->type == "get");
+        REQUIRE(received->key == "missing_key");
     }
     
 }
+
+
+// TEST_CASE( "Exceptions handling " ) {
+//     TestServer server;
+//     Aroww::ArowwDB db{"localhost", "7333"};
+    
+//     SECTION ("Requested GET, SET returned") {
+//         server.engine.next_response = std::make_unique<MessageSetResponse>();
+        
+
+//         REQUIRE_THROWS_MATCHES(db.get("first"), Aroww::ArowwException, Catch::Message("Wrong message")); 
+//     }
+// }

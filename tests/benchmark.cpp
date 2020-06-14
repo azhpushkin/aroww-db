@@ -29,7 +29,6 @@ TEST_CASE( "Basic benchmark" ) {
         }
         return 0;
     };
-
 }
 
 TEST_CASE( "Benchmark with changing memtable size" ) {

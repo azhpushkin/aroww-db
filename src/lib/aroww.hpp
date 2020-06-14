@@ -1,24 +1,28 @@
-#include <cstdbool>
 #include <string>
-#include <memory>
+#include <optional>
 
-#include "common/messages.hpp"
+namespace Aroww {
+    class ArowwException : public std::exception {
+    public:
+        std::string message;
+        ArowwException(std::string message_);
+        const char * what () const noexcept;
+    };
 
-class ArowwDB {
-public:
-    ArowwDB(std::string host, std::string port);
-    ~ArowwDB();
 
-    std::unique_ptr<Message> get(std::string key);
-    std::unique_ptr<Message> set(std::string key, std::string value);
-    std::unique_ptr<Message> drop(std::string key);
+    class ArowwDB {
+    public:
+        std::string host;
+        std::string port;
+        int sockfd;
 
-private:
-    std::string host;
-    std::string port;
-    int sockfd;
+        ArowwDB(std::string host, std::string port);
+        ~ArowwDB();
 
-    void open_socket();
-    std::unique_ptr<Message> get_result();
-};
+        std::optional<std::string> get(std::string key);
+        void set(std::string key, std::string value);
+        void drop(std::string key);
+    };
+}
+
 

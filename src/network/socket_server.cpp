@@ -20,7 +20,7 @@ SimpleSocketServer::SimpleSocketServer(int port_, AbstractEngine& engine_)
       ready_mutex.lock();
   }
 
-void SimpleSocketServer::close() { close_scheduled = true; }
+void SimpleSocketServer::schedule_close() { close_scheduled = true; }
 
 
 int SimpleSocketServer::start_listening()
@@ -84,5 +84,6 @@ int SimpleSocketServer::start_listening()
     for (auto& conn: connections) {
         conn.close_conn();
     }
+    close(sockfd);
     return 0;
 }

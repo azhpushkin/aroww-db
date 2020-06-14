@@ -23,7 +23,7 @@ class SimpleSocketServer {
 public:
     SimpleSocketServer(int, AbstractEngine&);
     int start_listening();
-    void close();
+    void schedule_close();
     std::mutex ready_mutex;
 private:
     int port;

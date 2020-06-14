@@ -1,25 +1,24 @@
 #include <cstdbool>
+#include <string>
+#include <memory>
 
+#include "common/messages.hpp"
 
-typedef struct {
-    char* host;
-    char* port;
+class ArowwDB {
+public:
+    ArowwDB(std::string host, std::string port);
+    ~ArowwDB();
 
-    int socket_fd;
-} ArowwDB;
+    std::unique_ptr<Message> get(std::string key);
+    std::unique_ptr<Message> set(std::string key, std::string value);
+    std::unique_ptr<Message> drop(std::string key);
 
-typedef struct {
-    bool is_ok;
-    char* value;
-    char* error_msg;
+private:
+    std::string host;
+    std::string port;
+    int sockfd;
 
-} ArowwResult;
+    void open_socket();
+    std::unique_ptr<Message> get_result();
+};
 
-
-extern "C" ArowwDB* aroww_init(char* host, char* port);
-extern "C" void aroww_close(ArowwDB* db);
-
-extern "C" ArowwResult* aroww_get(ArowwDB* db, char* key, int keyl);
-extern "C" ArowwResult* aroww_set(ArowwDB* db, char* key, int keyl, char* value, int valuel);
-extern "C" ArowwResult* aroww_drop(ArowwDB* db, char* key, int keyl);
-extern "C" void aroww_free_result(ArowwResult* res);

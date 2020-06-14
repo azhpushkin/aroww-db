@@ -7,66 +7,53 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+#include <memory>
+
 #include "aroww.hpp"
 #include "common/messages.hpp"
-
-// Do not include to header file as not part of the interface
-void open_socket(ArowwDB* db);
-ArowwResult* get_result(ArowwDB* db);
+#include "common/string_or_tomb.hpp"
 
 
-ArowwDB* aroww_init(char* host, char* port) {
-	ArowwDB* db = (ArowwDB*) malloc(sizeof(ArowwDB));
-	db->host = strdup(host);
-	db->port = strdup(port);
-	open_socket(db);
-	return db;
-}
-
-void aroww_close(ArowwDB* db) {
-	close(db->socket_fd);
-	free(db->host);
-	free(db->port);
-	free(db);
-}
-
-
-ArowwResult* aroww_get(ArowwDB* db, char* key, int keyl) {
-	MsgGetReq msg;
-	msg.key = std::string(key, keyl);
+std::unique_ptr<Message> ArowwDB::get(std::string key) {
+	MessageGetRequest msg;
+	msg.key = key;
 
 	auto packed = msg.pack_message();
-	send(db->socket_fd, packed.c_str(), packed.size(), 0);
+	send(sockfd, packed.c_str(), packed.size(), 0);
 	
-    return get_result(db);
+    return get_result();
 }
 
 
-ArowwResult* aroww_set(ArowwDB* db, char* key, int keyl, char* value, int valuel) {
-	MsgSetReq msg;
-	msg.key = std::string(key, keyl);
-	msg.value = std::string(value, valuel);
+std::unique_ptr<Message> ArowwDB::set(std::string key, std::string value) {
+	MessageSetRequest msg;
+	msg.key = key;
+	msg.value = value;
 
 	auto packed = msg.pack_message();
-	send(db->socket_fd, packed.c_str(), packed.size(), 0);
+	send(sockfd, packed.c_str(), packed.size(), 0);
 	
-    return get_result(db);
+    return get_result();
 }
 
-ArowwResult* aroww_drop(ArowwDB* db, char* key, int keyl) {
-	MsgDropReq msg;
-	msg.key = std::string(key, keyl);
+std::unique_ptr<Message> ArowwDB::drop(std::string key) {
+	MessageSetRequest msg;
+	msg.key = key;
+	msg.value = tomb::create();
 
 	auto packed = msg.pack_message();
-	send(db->socket_fd, packed.c_str(), packed.size(), 0);
+	send(sockfd, packed.c_str(), packed.size(), 0);
 	
-    return get_result(db);
+    return get_result();
 }
 
-void aroww_free_result(ArowwResult* res) {
-	free(res->value);
-	free(res->error_msg);
-	free(res);
+
+ArowwDB::ArowwDB(std::string h, std::string p): host(h), port(p) {
+	open_socket();
+}
+
+ArowwDB::~ArowwDB() {
+	close(sockfd);
 }
 
 
@@ -81,8 +68,7 @@ void *get_in_addr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-void open_socket(ArowwDB* db) {
-    int sockfd;  
+void ArowwDB::open_socket() {
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
 	char s[INET6_ADDRSTRLEN];
@@ -91,7 +77,7 @@ void open_socket(ArowwDB* db) {
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 
-	if ((rv = getaddrinfo(db->host, db->port, &hints, &servinfo)) != 0) {
+	if ((rv = getaddrinfo(host.c_str(), port.c_str(), &hints, &servinfo)) != 0) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
 	}
 
@@ -118,50 +104,17 @@ void open_socket(ArowwDB* db) {
 	inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr), s, sizeof s);
 	printf("Successfully connected to %s\n", s);
 	freeaddrinfo(servinfo); // all done with this structure
-    db->socket_fd = sockfd;
 }
 
 
-ArowwResult* get_result(ArowwDB* db) {
+std::unique_ptr<Message> ArowwDB::get_result() {
     int numbytes;
     char buf[1024];
     
-    if ((numbytes = recv(db->socket_fd, buf, 1024-1, 0)) == -1) {
+    if ((numbytes = recv(sockfd, buf, 1024-1, 0)) == -1) {
         perror("recv");
         exit(1);
     }
-	auto msg = Message::unpack_message(std::string(buf, numbytes));
-	ArowwResult* c_res = (ArowwResult*) malloc(sizeof(ArowwResult));
-
-	if (auto p = dynamic_cast<MsgGetOkResp*>(msg.get())) {
-		c_res->is_ok = true;
-		c_res->error_msg = NULL;
-		c_res->value = (char*)malloc((p->val.size() + 1) * sizeof(char));
-		strncpy(c_res->value, p->val.c_str(), p->val.size()+1);
-
-	} else if (dynamic_cast<MsgGetMissingResp*>(msg.get())) {
-		c_res->is_ok = false;
-		c_res->error_msg = NULL;
-		c_res->value = NULL;
-
-	} else if (dynamic_cast<MsgUpdateOkResp*>(msg.get())) {
-		c_res->is_ok = true;
-		c_res->error_msg = NULL;
-		c_res->value = NULL;
-
-	} else if (auto p = dynamic_cast<MsgErrorResp*>(msg.get())) {
-		c_res->is_ok = false;
-		c_res->value = NULL;
-		c_res->error_msg = (char*)malloc((p->error_msg.size() + 1) * sizeof(char));
-
-		strncpy(c_res->error_msg, p->error_msg.c_str(), p->error_msg.size()+1);
-	} else {
-		c_res->is_ok = false;
-		c_res->error_msg = NULL;
-		c_res->value = (char*)malloc(14 * sizeof(char));
-		strncpy(c_res->value, "Bad response.", 14);
-	}
-	
-    return c_res;
+	return Message::unpack_message(std::string(buf, numbytes));
 }
 

@@ -11,14 +11,32 @@
 #include <optional>
 #include <variant>
 
+#include "fmt/format.h"
+
 #include "aroww.hpp"
 #include "common/messages.hpp"
 #include "common/string_or_tomb.hpp"
 
 
+#define WRONG_TYPE_MSG(EXP, GOT) fmt::format("Wrong message received: expected {:c}, got {:c}!", EXP, GOT)
+
 // Private functions
 int open_socket(Aroww::ArowwDB* conn);
 std::unique_ptr<Message> get_result(Aroww::ArowwDB* conn);
+
+template<typename T>
+std::unique_ptr<T> check_and_convert(std::unique_ptr<Message> msg) {
+	if (msg->get_flag() == ERROR_RESP) {
+		auto error_msg = std::unique_ptr<MessageErrorResponse>((MessageErrorResponse*)msg.release());
+		
+		throw Aroww::ArowwException(error_msg->error_msg);
+	}
+	if (T::get_flag_static() != msg->get_flag()) {
+		throw Aroww::ArowwException(WRONG_TYPE_MSG(T::get_flag_static(), msg->get_flag()));
+	}
+
+	return std::unique_ptr<T>((T*)msg.release());
+}
 
 
 namespace Aroww {
@@ -44,10 +62,10 @@ namespace Aroww {
 		send(sockfd, packed.c_str(), packed.size(), 0);
 
 		auto response_msg = get_result(this);
-		Message* x = response_msg.release();
-		auto get_response = std::unique_ptr<MessageGetResponse>((MessageGetResponse*)x);
-		if (std::holds_alternative<std::string>(get_response->value)) {
-			return std::get<std::string>(get_response->value);
+		auto converted_msg = check_and_convert<MessageGetResponse>(std::move(response_msg));
+		
+		if (std::holds_alternative<std::string>(converted_msg->value)) {
+			return std::get<std::string>(converted_msg->value);
 		} else {
 			return std::nullopt;
 		}
@@ -63,6 +81,7 @@ namespace Aroww {
 		send(sockfd, packed.c_str(), packed.size(), 0);
 		
 		auto response_msg = get_result(this);
+		check_and_convert<MessageSetResponse>(std::move(response_msg));
 	}
 
 	void ArowwDB::drop(std::string key) {
@@ -74,6 +93,7 @@ namespace Aroww {
 		send(sockfd, packed.c_str(), packed.size(), 0);
 		
 		auto response_msg = get_result(this);
+		check_and_convert<MessageSetResponse>(std::move(response_msg));
 	}
 
 }  // namespace end

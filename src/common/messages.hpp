@@ -40,6 +40,7 @@ class MessageGetRequest: public Message {
 public:
     std::string key;
     char get_flag() { return GET_REQ; };
+    static char get_flag_static() { return GET_REQ; };
 private:
     void pack_fields(std::stringstream& ss);
     void unpack_fields(std::stringstream& ss);
@@ -50,6 +51,7 @@ public:
     std::string key;
     string_or_tomb value;
     char get_flag() { return SET_REQ; };
+    static char get_flag_static() { return SET_REQ; };
 private:
     void pack_fields(std::stringstream& ss);
     void unpack_fields(std::stringstream& ss);
@@ -60,6 +62,7 @@ class MessageGetResponse: public Message {
 public:
     string_or_tomb value;
     char get_flag() { return GET_RESP; };
+    static char get_flag_static() { return GET_RESP; };
 private:
     void pack_fields(std::stringstream& ss);
     void unpack_fields(std::stringstream& ss);
@@ -68,12 +71,14 @@ private:
 class MessageSetResponse: public Message {
 public:
     char get_flag() { return SET_RESP; };
+    static char get_flag_static() { return SET_RESP; };
 };
 
 class MessageErrorResponse: public Message {
 public:
     std::string error_msg;
     char get_flag() { return ERROR_RESP; };
+    static char get_flag_static() { return ERROR_RESP; };
 private:
     void pack_fields(std::stringstream& ss);
     void unpack_fields(std::stringstream& ss); 

@@ -102,7 +102,6 @@ void ArowwDB::open_socket() {
 	}
 
 	inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr), s, sizeof s);
-	printf("Successfully connected to %s\n", s);
 	freeaddrinfo(servinfo); // all done with this structure
 }
 

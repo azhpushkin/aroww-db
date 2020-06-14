@@ -29,8 +29,8 @@ MemTable::MemTable(fs::path datadir) {
         }
     }
     
-
-    log_file = std::fstream(datadir / "memtable.txt", std::ios::binary | std::ios::app);
+    log_file_path = datadir / "memtable.txt";
+    log_file = std::fstream(log_file_path, std::ios::binary | std::ios::app);
 }
 
 
@@ -39,4 +39,14 @@ void MemTable::set_value(std::string key, string_or_tomb value) {
     pack_string(log_file, key);
     pack_string_or_tomb(log_file, value);
     log_file.flush();
+}
+
+void MemTable::cleanup() {
+    log_file.flush();
+    log_file.close();
+    container.clear();
+    if (fs::exists(log_file_path)) {
+        fs::remove(log_file_path);
+    }
+    
 }

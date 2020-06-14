@@ -105,18 +105,14 @@ std::unique_ptr<Message> DBEngine::drop(std::string key)
 
 
 void DBEngine::switch_if_needed() {
-    // if (current_memtable.size() < conf.max_segment_size) {
-    //     return;
-    // }
+    if (current_memtable->container.size() < conf.max_memtable_size) {
+        return;
+    }
 
-    // int64_t timestamp = static_cast<int64_t>(time(NULL));
-    // auto new_segment = Segment::dump_memtable(current_memtable, DATA_DIR(conf), timestamp, conf.index_step);
-    // segments.push_front(new_segment);
+    int64_t timestamp = static_cast<int64_t>(time(NULL));
+    auto new_segment = Segment::dump_memtable(*current_memtable, DATA_DIR(conf), timestamp, conf.index_step);
+    segments.push_front(new_segment);
     
-    // current_memtable.clear();
-    // memtable_file.close();
-    // fs::remove(DATA_DIR(conf) / "memtable.txt");
-
-
-    // memtable_file = std::fstream(DATA_DIR(conf) / "memtable.txt", std::ios::binary | std::ios::app);
+    current_memtable->cleanup();
+    current_memtable = std::make_unique<MemTable>(DATA_DIR(conf));
 }

@@ -23,7 +23,9 @@ class MemTable {
 public:
     std::map<std::string, string_or_tomb, memtablecomp> container;
     std::fstream log_file;
+    fs::path log_file_path;
 
     MemTable(fs::path datadir);
     void set_value(std::string key, string_or_tomb value);
+    void cleanup();
 };

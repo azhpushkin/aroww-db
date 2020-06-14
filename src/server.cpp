@@ -13,7 +13,6 @@ int main(int argc, char* argv[])
 {
     cxxopts::Options options("ArowwDB", "Simple key-value storage");
     options.add_options()
-        // TODO process verbose keyword to show different spdlog
         ("v,verbose", "Output all info", cxxopts::value<bool>()->default_value("false"))
         ("d,datadir", "Path to directory for storing data", cxxopts::value<std::string>())
         ("i,index", "Index each N elements", cxxopts::value<unsigned int>()->default_value("5"))

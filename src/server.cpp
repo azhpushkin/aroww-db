@@ -7,6 +7,7 @@
 
 #include "engine/engine.hpp"
 #include "network/socket_server.hpp"
+#include "utils/logger.hpp"
 
 
 int main(int argc, char* argv[])
@@ -37,19 +38,18 @@ int main(int argc, char* argv[])
         path_input = result["datadir"].as<std::string>();
     }
     catch (std::domain_error &e) {
-        // TODO: log error via some logger
-        std::cerr << "Error: no path is given!" << std::endl;
+        log_error("Error: no path is given during initialization!");
         return 1;
     }
 
     std::filesystem::path path(path_input);
     std::error_code ec;
     if (!std::filesystem::is_directory(path, ec)) {
-        std::cerr << "Error: path is not a directory" << std::endl;
+        log_error("Error: given path is not a directory!");
         return 1;
     } 
     if (ec) {
-        std::cerr << "Error with path: " << ec.message() << std::endl;
+        log_error("Error,  path is unavailable: {}", ec.message());
         return 1;
     }
     

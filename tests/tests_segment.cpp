@@ -8,7 +8,8 @@
 #include "fmt/format.h"
 
 #include "engine/engine.hpp"
-#include "common/serialization.hpp"
+#include "engine/segment.hpp"
+#include "common/string_or_tomb.hpp"
 #include "tests_config.hpp"
 
 
@@ -47,13 +48,12 @@ std::string random_string(size_t len)
 
 
 TEST_CASE( "dump_memtable" ) {
-    MemTable memtable;
+    MemTable memtable(TEMP_DIR);
 
-    tomb t{};
-    memtable["empty_key"] = t;
-    memtable["first"] = "111111111";
-    memtable["second"] = std::string(30, 'x');
-    memtable["hello"] = "W orl\n\td";
+    memtable.container["empty_key"] = tomb::create();
+    memtable.container["first"] = "111111111";
+    memtable.container["second"] = std::string(30, 'x');
+    memtable.container["hello"] = "W orl\n\td";
 
     
     auto index_step = GENERATE(as<unsigned int>{}, 1, 2, 3, 4);

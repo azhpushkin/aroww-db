@@ -10,18 +10,9 @@
 #include <optional>
 
 #include "common/serialization.hpp"
+#include "memtable.hpp"
 
 namespace fs = std::filesystem;
-
-// Memtable
-struct memtablecomp {
-  bool operator() (const std::string& lhs, const std::string& rhs) const
-  {return lhs<rhs;}
-};
-
-typedef std::map<std::string, string_or_tomb, memtablecomp> MemTable;
-
-MemTable load_memtable(fs::path p);
 
 // Segment
 typedef std::map<std::string, int64_t> SegmentIndex;

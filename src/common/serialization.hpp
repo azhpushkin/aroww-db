@@ -5,14 +5,9 @@
 #include <cstdint>
 #include <variant>
 
+#include "string_or_tomb.hpp"
+
 #define TOMB_MARK -1
-
-class tomb {
-public:
-    static tomb create();
-};
-typedef std::variant<std::string, tomb>  string_or_tomb;
-
 
 void pack_char(std::ostream& ss, const char& c);
 void unpack_char(std::istream& ss, char& c);

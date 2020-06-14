@@ -3,11 +3,6 @@
 
 #include "serialization.hpp"
 
-tomb tomb::create() {
-    tomb t{};
-    return t;
-}
-
 void pack_char(std::ostream& ss, const char& c) {
     ss.write(&c, 1);
 }

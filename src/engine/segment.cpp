@@ -20,21 +20,7 @@
 
 namespace fs = std::filesystem;
 
-MemTable load_memtable(fs::path p) {
-    MemTable table; 
-    std::fstream memtable_path(p, std::ios::binary | std::ios::in);
 
-    while (memtable_path.peek() != EOF) {
-        std::string key;
-        string_or_tomb value;
-
-        unpack_string(memtable_path, key);
-        unpack_string_or_tomb(memtable_path, value);
-        table[key] = value;
-    }
-
-    return table;
-}
 
 
 /* 
@@ -71,8 +57,8 @@ Segment::Segment(fs::path p): file_path(p) {
 
 
 std::shared_ptr<Segment> Segment::dump_memtable(MemTable& mtbl, fs::path dir, int64_t timestamp, unsigned int index_step) {
-    int64_t total_size = static_cast<int64_t>(mtbl.size());
-    int64_t index_size = static_cast<int64_t>(mtbl.size());  // same as total currently
+    int64_t total_size = static_cast<int64_t>(mtbl.container.size());
+    int64_t index_size = static_cast<int64_t>(mtbl.container.size());  // same as total currently
     int64_t index_start_pos = 0;  // filled later
 
     std::fstream sstable(SSTABLE_PATH(dir, timestamp), SSTABLE_WRITE_MODE);
@@ -84,7 +70,7 @@ std::shared_ptr<Segment> Segment::dump_memtable(MemTable& mtbl, fs::path dir, in
     SegmentIndex index;
 
     auto index_i = index_step - 1;
-    for (auto pair: mtbl) {
+    for (auto pair: mtbl.container) {
         if (index_i == index_step - 1) {
             auto pos = sstable.tellp();  // remember for index posi
             index[pair.first] = pos;

@@ -4,7 +4,7 @@
 
 #include "workers.hpp"
 #include "common/messages.hpp"
-#include "common/serialization.hpp"
+#include "common/string_or_tomb.hpp"
 
 
 ReadTask::ReadTask(std::string key_): key(key_), msg(nullptr), cv(), m() {}
@@ -43,8 +43,8 @@ void ReadWorker::start(ReadWorker* worker) {
 
 string_or_tomb ReadWorker::memtable_and_segments_lookup(std::string key) {
     auto resp = std::make_unique<MessageGetResponse>();
-    if (engine->current_memtable.find(key) != engine->current_memtable.end()) {
-        return engine->current_memtable.at(key);
+    if (engine->current_memtable->container.find(key) != engine->current_memtable->container.end()) {
+        return engine->current_memtable->container.at(key);
     }
 
     for (auto segment: engine->segments) {

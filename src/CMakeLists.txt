@@ -6,11 +6,13 @@ set(DIR_PATH ${CMAKE_BINARY_DIR})
 
 # Source files
 set(SOURCES
+    common/string_or_tomb.cpp
     common/messages.cpp
     common/serialization.cpp
 
     engine/engine.cpp
     engine/segment.cpp
+    engine/memtable.cpp
     engine/workers.cpp
     network/socket_server.cpp
     network/connection.cpp

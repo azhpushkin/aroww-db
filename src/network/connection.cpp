@@ -6,7 +6,7 @@
 
 #include "socket_server.hpp"
 #include "engine/interface.hpp"
-#include "network/messages.hpp"
+#include "common/messages.hpp"
 #include "utils/logger.hpp"
 
 
@@ -57,14 +57,21 @@ void RunningConnection::start() {
         
 
         std::unique_ptr<Message> resp;
-        if (auto p = dynamic_cast<MsgGetReq*>(req.get())) {
+        if (auto p = dynamic_cast<MessageGetRequest*>(req.get()))
+        {
             resp = engine.get(p->key);
-        } else if (auto p = dynamic_cast<MsgSetReq*>(req.get())) {
-            resp = engine.set(p->key, p->value);
-        }else if (auto p = dynamic_cast<MsgDropReq*>(req.get())) {
-            resp = engine.drop(p->key);
-        } else {
-            auto err = new MsgErrorResp();
+        }
+        else if (auto p = dynamic_cast<MessageSetRequest*>(req.get()))
+        {
+            if (std::holds_alternative<tomb>(p->value)) {
+                resp = engine.drop(p->key);
+            } else {
+                resp = engine.set(p->key, std::get<std::string>(p->value));
+            }
+        }
+        else
+        {
+            auto err = new MessageErrorResponse();
             err->error_msg = fmt::format("Not supported operation: {}", req->get_flag());
             resp = std::unique_ptr<Message>(err);
         }

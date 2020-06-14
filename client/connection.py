@@ -34,15 +34,15 @@ def init_library(libname: str):
     lib.aroww_close.restype = None
 
     # ArowwResult* aroww_get(ArowwDB* db, char* key);
-    lib.aroww_get.argtypes = [POINTER(ArowwDBStruct), c_char_p]
+    lib.aroww_get.argtypes = [POINTER(ArowwDBStruct), c_char_p, c_int]
     lib.aroww_get.restype = POINTER(ArowwResultStruct)
 
     # ArowwResult* aroww_set(ArowwDB* db, char* key, char* value);
-    lib.aroww_set.argtypes = [POINTER(ArowwDBStruct), c_char_p, c_char_p]
+    lib.aroww_set.argtypes = [POINTER(ArowwDBStruct), c_char_p, c_int, c_char_p, c_int]
     lib.aroww_set.restype = POINTER(ArowwResultStruct)
 
     # ArowwResult* aroww_drop(ArowwDB* db, char* key);
-    lib.aroww_drop.argtypes = [POINTER(ArowwDBStruct), c_char_p]
+    lib.aroww_drop.argtypes = [POINTER(ArowwDBStruct), c_char_p, c_int]
     lib.aroww_drop.restype = POINTER(ArowwResultStruct)
 
     # void aroww_free_result(ArowwResult* res);
@@ -86,15 +86,15 @@ class ArowwDB:
         
     
     def get(self, key: str):
-        struct = self._lib.aroww_get(self._db, key.encode(ASCII))
+        struct = self._lib.aroww_get(self._db, key.encode(ASCII), len(key.encode(ASCII)))
         return self.to_python(struct)
     
     def drop(self, key: str):
-        struct = self._lib.aroww_drop(self._db, key.encode(ASCII))
+        struct = self._lib.aroww_drop(self._db, key.encode(ASCII), len(key.encode(ASCII)))
         return self.to_python(struct)
     
     def set(self, key: str, value: str):
-        struct = self._lib.aroww_set(self._db, key.encode(ASCII), value.encode(ASCII))
+        struct = self._lib.aroww_set(self._db, key.encode(ASCII), len(key.encode(ASCII)), value.encode(ASCII), len(value.encode(ASCII)))
         return self.to_python(struct)
     
     def __del__(self):

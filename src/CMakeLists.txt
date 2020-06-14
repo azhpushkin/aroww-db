@@ -6,28 +6,29 @@ set(DIR_PATH ${CMAKE_BINARY_DIR})
 
 # Source files
 set(SOURCES
+    common/messages.cpp
+    common/serialization.cpp
+
     engine/engine.cpp
     engine/segment.cpp
     engine/workers.cpp
     network/socket_server.cpp
     network/connection.cpp
-    network/messages.cpp
-    utils/serialization.cpp
 )
 # Separate args to lower final size of library
-set(LIB_SOURCES
-    lib/aroww.cpp
-    network/messages.cpp
-    utils/serialization.cpp
-)
+# set(LIB_SOURCES
+#     lib/aroww.cpp
+#     network/messages.cpp
+#     utils/serialization.cpp
+# )
 
 # Also add this paths to include dir for tests
 set(TESTABLE_HDR_INCLUDE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 
 # Executables and libs
 add_executable(aroww-server ${SOURCES} server.cpp)
-add_library(aroww-db SHARED ${LIB_SOURCES})
-add_library(aroww-db-for-tests SHARED ${SOURCES} ${LIB_SOURCES})
+# add_library(aroww-db SHARED ${LIB_SOURCES})
+add_library(aroww-db-for-tests SHARED ${SOURCES})
 
 # Target to run server
 add_custom_target(serv DEPENDS aroww-server)

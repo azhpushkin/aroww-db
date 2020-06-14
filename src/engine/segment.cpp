@@ -11,7 +11,7 @@
 #include <fmt/format.h>
 
 #include "segment.hpp"
-#include "utils/serialization.hpp"
+#include "common/serialization.hpp"
 
 
 #define SSTABLE_PATH(dir, timestamp) (dir / fmt::format("{}.sstable", timestamp))
@@ -26,7 +26,7 @@ MemTable load_memtable(fs::path p) {
 
     while (memtable_path.peek() != EOF) {
         std::string key;
-        std::optional<std::string> value;
+        string_or_tomb value;
 
         unpack_string(memtable_path, key);
         unpack_string_or_tomb(memtable_path, value);
@@ -113,7 +113,7 @@ std::shared_ptr<Segment> Segment::dump_memtable(MemTable& mtbl, fs::path dir, in
 }
 
 
-std::optional<std::variant<std::string, std::nullptr_t>> Segment::lookup(std::string key) {
+std::optional<string_or_tomb> Segment::lookup(std::string key) {
     std::vector<std::string> keys;
     for (auto const& element : index) {
         keys.push_back(element.first);
@@ -130,123 +130,118 @@ std::optional<std::variant<std::string, std::nullptr_t>> Segment::lookup(std::st
     sstable_file.seekg(index[*pos_iter], sstable_file.beg);
     while (sstable_file.tellg() != index_start) {
         std::string key_from_file;
-        std::optional<std::string> value;
+        string_or_tomb value;
         unpack_string(sstable_file, key_from_file);
         unpack_string_or_tomb(sstable_file, value);
         
-        if (key_from_file != key) {
-            continue;
-        }
-        if (value.has_value()) {
+        if (key_from_file == key) {
             return value;
-        } else {
-            return nullptr;
         }
     }
     return std::nullopt;  // not found
     
 }
 
-SegmentPtr Segment::merge(std::vector<SegmentPtr> segments, unsigned int index_step) {
-    // Ensure order is correct -> latest comes first
-    sort(segments.begin(), segments.end(), [](SegmentPtr& l, SegmentPtr &r) { return l->timestamp > r->timestamp;});
+// SegmentPtr Segment::merge(std::vector<SegmentPtr> segments, unsigned int index_step) {
+//     // Ensure order is correct -> latest comes first
+//     sort(segments.begin(), segments.end(), [](SegmentPtr& l, SegmentPtr &r) { return l->timestamp > r->timestamp;});
 
-    // Prepare data of new segment
-    auto latest = segments.front();
-    std::fstream target_sstable(
-        SSTABLE_PATH(latest->file_path.parent_path(), latest->timestamp + 1),
-        SSTABLE_WRITE_MODE
-    );
-    int64_t timestamp = latest->timestamp + 1;
-    int64_t total_size = 0;
-    int64_t index_size = 0;
-    int64_t index_start_pos = 0;
-    pack_int64(target_sstable, timestamp);
-    pack_int64(target_sstable, total_size);
-    pack_int64(target_sstable, index_size);
-    pack_int64(target_sstable, index_start_pos);
-    SegmentIndex index;
+//     // Prepare data of new segment
+//     auto latest = segments.front();
+//     std::fstream target_sstable(
+//         SSTABLE_PATH(latest->file_path.parent_path(), latest->timestamp + 1),
+//         SSTABLE_WRITE_MODE
+//     );
+//     int64_t timestamp = latest->timestamp + 1;
+//     int64_t total_size = 0;
+//     int64_t index_size = 0;
+//     int64_t index_start_pos = 0;
+//     pack_int64(target_sstable, timestamp);
+//     pack_int64(target_sstable, total_size);
+//     pack_int64(target_sstable, index_size);
+//     pack_int64(target_sstable, index_start_pos);
+//     SegmentIndex index;
 
     
-    // Prepare old segments 
-    int size = segments.size();
-    int reached_end = 0;
+//     // Prepare old segments 
+//     int size = segments.size();
+//     int reached_end = 0;
 
-    std::vector<int> statuses(size, 0);
-    std::vector<std::string> loaded_keys(size, "");
-    std::vector<std::fstream> files(size);
-    for (int i = 0; i < size; i++) {
-        files[i] = std::fstream(segments[i]->file_path, SSTABLE_READ_MODE);
-        files[i].seekg(sizeof(int64_t) * 4);
-    }
+//     std::vector<int> statuses(size, 0);
+//     std::vector<std::string> loaded_keys(size, "");
+//     std::vector<std::fstream> files(size);
+//     for (int i = 0; i < size; i++) {
+//         files[i] = std::fstream(segments[i]->file_path, SSTABLE_READ_MODE);
+//         files[i].seekg(sizeof(int64_t) * 4);
+//     }
 
 
-    auto index_i = index_step;
-    // 0 - needs to read a string, 1 - string is loaded, 2 - reached end
-    while (reached_end != size) {
-        // Load keys from all files if needed
-        for (int i = 0; i < size; i++) {
-            if (statuses[i] == 0) {
-                unpack_string(files[i], loaded_keys[i]);
-                statuses[i] = 1;
-            }
-        }
+//     auto index_i = index_step;
+//     // 0 - needs to read a string, 1 - string is loaded, 2 - reached end
+//     while (reached_end != size) {
+//         // Load keys from all files if needed
+//         for (int i = 0; i < size; i++) {
+//             if (statuses[i] == 0) {
+//                 unpack_string(files[i], loaded_keys[i]);
+//                 statuses[i] = 1;
+//             }
+//         }
 
-        // TODO: skip elements with 2
-        std::optional<std::string> min_iter = std::nullopt;
-        for (int i = 0; i < size; i++) {
-            if (statuses[i] == 2) continue;
+//         // TODO: skip elements with 2
+//         std::optional<std::string> min_iter = std::nullopt;
+//         for (int i = 0; i < size; i++) {
+//             if (statuses[i] == 2) continue;
 
-            if (!min_iter.has_value() || loaded_keys[i] < min_iter.value()) {
-                min_iter = loaded_keys[i];
-            }
-        }
+//             if (!min_iter.has_value() || loaded_keys[i] < min_iter.value()) {
+//                 min_iter = loaded_keys[i];
+//             }
+//         }
 
-        bool loaded = false;
-        std::optional<std::string> val;
+//         bool loaded = false;
+//         std::optional<std::string> val;
 
-        for (int i = 0; i < size; i++) {
-            if (loaded_keys[i] == min_iter) {
-                unpack_string_or_tomb(files[i], val);
-                if (!loaded) {
-                    loaded = true;
+//         for (int i = 0; i < size; i++) {
+//             if (loaded_keys[i] == min_iter) {
+//                 unpack_string_or_tomb(files[i], val);
+//                 if (!loaded) {
+//                     loaded = true;
 
-                    if (index_i == index_step) {
-                        auto pos = target_sstable.tellp();  // remember for index pos
-                        index[min_iter.value()] = pos;
-                        index_i = 0;
-                    } else {
-                        index_i++;
-                    }
+//                     if (index_i == index_step) {
+//                         auto pos = target_sstable.tellp();  // remember for index pos
+//                         index[min_iter.value()] = pos;
+//                         index_i = 0;
+//                     } else {
+//                         index_i++;
+//                     }
                     
-                    pack_string(target_sstable, min_iter.value());
-                    pack_string_or_tomb(target_sstable, val);
-                    total_size++;
-                    index_size++;
-                }
+//                     pack_string(target_sstable, min_iter.value());
+//                     pack_string_or_tomb(target_sstable, val);
+//                     total_size++;
+//                     index_size++;
+//                 }
                 
-                if (files[i].tellp() == segments[i]->index_start) {
-                    reached_end++;
-                    statuses[i] = 2;
-                } else {
-                    statuses[i] = 0;
-                }
-            }
-        }
-    }
+//                 if (files[i].tellp() == segments[i]->index_start) {
+//                     reached_end++;
+//                     statuses[i] = 2;
+//                 } else {
+//                     statuses[i] = 0;
+//                 }
+//             }
+//         }
+//     }
 
-    index_start_pos = target_sstable.tellp();
-    for (auto pair: index) {
-        pack_string(target_sstable, pair.first);
-        pack_int64(target_sstable, pair.second);
-    }
+//     index_start_pos = target_sstable.tellp();
+//     for (auto pair: index) {
+//         pack_string(target_sstable, pair.first);
+//         pack_int64(target_sstable, pair.second);
+//     }
 
-    target_sstable.seekp(target_sstable.beg);
-    pack_int64(target_sstable, timestamp);
-    pack_int64(target_sstable, total_size);
-    pack_int64(target_sstable, index_size);
-    pack_int64(target_sstable, index_start_pos);
-    target_sstable.close();
+//     target_sstable.seekp(target_sstable.beg);
+//     pack_int64(target_sstable, timestamp);
+//     pack_int64(target_sstable, total_size);
+//     pack_int64(target_sstable, index_size);
+//     pack_int64(target_sstable, index_start_pos);
+//     target_sstable.close();
 
-    return std::make_shared<Segment>(SSTABLE_PATH(latest->file_path.parent_path(), timestamp));
-}
+//     return std::make_shared<Segment>(SSTABLE_PATH(latest->file_path.parent_path(), timestamp));
+// }

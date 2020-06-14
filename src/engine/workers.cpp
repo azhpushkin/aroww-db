@@ -3,6 +3,8 @@
 #include <condition_variable>
 
 #include "workers.hpp"
+#include "common/messages.hpp"
+#include "common/serialization.hpp"
 
 
 ReadTask::ReadTask(std::string key_): key(key_), msg(nullptr), cv(), m() {}
@@ -29,43 +31,30 @@ void ReadWorker::start(ReadWorker* worker) {
 
         {
             std::unique_lock<std::mutex> lock(task->m);
-            auto res = worker->lookup(task->key);
+            string_or_tomb value = worker->memtable_and_segments_lookup(task->key);
 
-            task->msg = std::move(res);
+            auto msg = new MessageGetResponse();
+            msg->value = value;
+            task->msg = std::unique_ptr<Message>(msg);
             task->cv.notify_all();
         }
     }
 }
 
-std::unique_ptr<Message> ReadWorker::lookup(std::string key) {
+string_or_tomb ReadWorker::memtable_and_segments_lookup(std::string key) {
+    auto resp = std::make_unique<MessageGetResponse>();
     if (engine->current_memtable.find(key) != engine->current_memtable.end()) {
-        auto val = engine->current_memtable.at(key);
-        if (val.has_value()) {
-            auto resp = std::make_unique<MsgGetOkResp>();
-            resp->val = val.value();
-            return resp;
-        }
-        else {
-            return std::make_unique<MsgGetMissingResp>();
-        }
+        return engine->current_memtable.at(key);
     }
 
-    for (auto s: engine->segments) {
-        auto res = s->lookup(key);
-        if (!res.has_value()) {
-            continue;
-        }
-        auto value = res.value();
-        if (std::holds_alternative<std::nullptr_t>(value)) {
-            return std::make_unique<MsgGetMissingResp>();
-        }
-        else {
-            auto resp = std::make_unique<MsgGetOkResp>();
-            resp->val = std::get<std::string>(value);
-            return resp;
+    for (auto segment: engine->segments) {
+        auto lookup_res = segment->lookup(key);
+        if (lookup_res.has_value()) {
+            return lookup_res.value();
         }
     }
-    return std::make_unique<MsgGetMissingResp>();
+    tomb t{};
+    return t;
 }
 
 

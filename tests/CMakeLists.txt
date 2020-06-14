@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0)
 
 # Add TESTABLE_HDR and TESTABLE_SRC to use files from src/
 include_directories(PUBLIC ${TESTABLE_HDR_INCLUDE})
-set(TEST_FILES tests_messages.cpp tests_segments.cpp tests_library.cpp tests_main.cpp)
+set(TEST_FILES tests_messages.cpp tests_segments.cpp tests_main.cpp)
 
 # Catch2 test runner compile
 find_package(Catch2 REQUIRED)

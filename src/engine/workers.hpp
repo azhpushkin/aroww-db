@@ -9,7 +9,8 @@
 #include "engine.fwd.hpp"
 
 #include "engine.hpp"
-#include "network/messages.hpp"
+#include "common/messages.hpp"
+#include "common/serialization.hpp"
 
 class ReadTask {
 public:
@@ -44,5 +45,5 @@ private:
     DBEngine* engine;
     std::shared_ptr<ReadQueue> read_queue;
 
-    std::unique_ptr<Message> lookup(std::string key);
+    string_or_tomb memtable_and_segments_lookup(std::string key);
 };

@@ -8,7 +8,7 @@
 #include <arpa/inet.h>
 
 #include "aroww.hpp"
-#include "network/messages.hpp"
+#include "common/messages.hpp"
 
 // Do not include to header file as not part of the interface
 void open_socket(ArowwDB* db);

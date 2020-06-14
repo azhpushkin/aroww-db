@@ -14,7 +14,7 @@
 #include "engine.hpp"
 #include "segment.hpp"
 #include "workers.hpp"
-#include "utils/serialization.hpp"
+#include "common/serialization.hpp"
 
 
 namespace fs = std::filesystem;
@@ -86,22 +86,22 @@ std::unique_ptr<Message> DBEngine::get(std::string key)
 
 std::unique_ptr<Message> DBEngine::set(std::string key, std::string value)
 {
+    return update_key(key, value);
+}
+
+std::unique_ptr<Message> DBEngine::drop(std::string key)
+{
+    tomb t{};
+    return update_key(key, t);
+}
+
+std::unique_ptr<Message> DBEngine::update_key(std::string key, string_or_tomb value) {
     current_memtable[key] = value;
     pack_string(memtable_file, key);
     pack_string_or_tomb(memtable_file, value);
     memtable_file.flush();
     switch_if_needed();
-    return std::make_unique<MsgUpdateOkResp>();
-}
-
-std::unique_ptr<Message> DBEngine::drop(std::string key)
-{
-    current_memtable[key] = std::nullopt;
-    pack_string(memtable_file, key);
-    pack_string_or_tomb(memtable_file, std::nullopt);
-    memtable_file.flush();
-    switch_if_needed();
-    return std::make_unique<MsgUpdateOkResp>();
+    return std::make_unique<MessageSetResponse>();
 }
 
 
@@ -122,16 +122,16 @@ void DBEngine::switch_if_needed() {
     memtable_file = std::fstream(DATA_DIR(conf) / "memtable.txt", std::ios::binary | std::ios::app);
 
 
-    if (segments.size() < MERGE_SEGMENTS_THRESHOLD) {
-        return;
-    }
+    // if (segments.size() < MERGE_SEGMENTS_THRESHOLD) {
+    //     return;
+    // }
 
-    std::vector<SegmentPtr> to_merge(segments.begin(), segments.end());
-    auto merged_segment = Segment::merge(to_merge, conf.index_step);
-    for (auto seg: segments) {
-        fs::remove(seg->file_path);
-    } 
+    // std::vector<SegmentPtr> to_merge(segments.begin(), segments.end());
+    // auto merged_segment = Segment::merge(to_merge, conf.index_step);
+    // for (auto seg: segments) {
+    //     fs::remove(seg->file_path);
+    // } 
 
-    segments.clear();
-    segments.push_front(merged_segment);
+    // segments.clear();
+    // segments.push_front(merged_segment);
 }

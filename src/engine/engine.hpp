@@ -19,7 +19,8 @@
 #include "segment.hpp"
 #include "workers.hpp"
 
-#include "network/messages.hpp"
+#include "common/messages.hpp"
+#include "common/serialization.hpp"
 
 
 class EngineConfiguration {
@@ -59,6 +60,7 @@ private:
     std::fstream memtable_file;
 
 
+    std::unique_ptr<Message> update_key(std::string key, string_or_tomb value);
     void switch_if_needed();
     friend class ReadWorker;
 };

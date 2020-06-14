@@ -6,10 +6,10 @@
 #include <map>
 #include <memory>
 #include <utility>
-#include <list>
 #include <mutex>
 #include <optional>
-#include <variant>
+
+#include "common/serialization.hpp"
 
 namespace fs = std::filesystem;
 
@@ -19,7 +19,7 @@ struct memtablecomp {
   {return lhs<rhs;}
 };
 
-typedef std::map<std::string, std::optional<std::string>, memtablecomp> MemTable;
+typedef std::map<std::string, string_or_tomb, memtablecomp> MemTable;
 
 MemTable load_memtable(fs::path p);
 
@@ -39,9 +39,9 @@ public:
     Segment(fs::path d);
 
     static SegmentPtr dump_memtable(MemTable& mtbl, fs::path dir, int64_t timestamp, unsigned int index_step);
-    static SegmentPtr merge(std::vector<SegmentPtr>, unsigned int index_step);
+    // static SegmentPtr merge(std::vector<SegmentPtr>, unsigned int index_step);
 
-    std::optional<std::variant<std::string, std::nullptr_t>> lookup(std::string key);
+    std::optional<string_or_tomb> lookup(std::string key);
 
 private:
     SegmentIndex index;

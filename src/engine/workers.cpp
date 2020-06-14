@@ -5,6 +5,7 @@
 #include "workers.hpp"
 #include "common/messages.hpp"
 #include "common/string_or_tomb.hpp"
+using namespace std::chrono_literals;
 
 
 ReadTask::ReadTask(std::string key_): key(key_), msg(nullptr), cv(), m() {}
@@ -18,16 +19,24 @@ void ReadQueue::push(std::shared_ptr<ReadTask> task) {
 }
 std::shared_ptr<ReadTask> ReadQueue::pop() {
     std::unique_lock<std::mutex> lock(m);
-    c.wait(lock, [this]{return !q.empty();});
-    auto read_task = q.front();
-    q.pop();
-    return read_task; 
+    auto received_task = c.wait_for(lock, 500ms, [this]{return !q.empty();});
+    if (received_task) {
+        auto read_task = q.front();
+        q.pop();
+        return read_task; 
+    } else {
+        return nullptr;
+    }
+    
 }
 
 
 void ReadWorker::start(ReadWorker* worker) {
-    while(true) {
+    while(!worker->close_scheduled) {
         auto task = worker->read_queue->pop();
+        if (task == nullptr) {
+            continue;
+        }
 
         {
             std::unique_lock<std::mutex> lock(task->m);
@@ -39,6 +48,7 @@ void ReadWorker::start(ReadWorker* worker) {
             task->cv.notify_all();
         }
     }
+    worker->close_finished();
 }
 
 string_or_tomb ReadWorker::memtable_and_segments_lookup(std::string key) {

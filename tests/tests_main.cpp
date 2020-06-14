@@ -1,6 +1,7 @@
 #include <filesystem>
 
-#define CATCH_CONFIG_RUNNER  
+#define CATCH_CONFIG_RUNNER 1
+#define CATCH_CONFIG_ENABLE_BENCHMARKING 1
 #include "catch2/catch.hpp"
 
 #include "tests_config.hpp"
@@ -14,7 +15,7 @@ int main( int argc, char* argv[] ) {
     if (fs::exists(TEMP_DIR)) {
         fs::remove_all(TEMP_DIR);
     }
-    std::filesystem::create_directory(TEMP_DIR);
+    fs::create_directory(TEMP_DIR);
 
     // Run actual tests
     int result = Catch::Session().run( argc, argv );

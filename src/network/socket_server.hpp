@@ -4,6 +4,7 @@
 
 #include "engine/interface.hpp"
 #include "common/messages.hpp"
+#include "utils/closeable.hpp"
 
 
 class RunningConnection {
@@ -19,15 +20,13 @@ private:
     void start();
 };
 
-class SimpleSocketServer {
+class SimpleSocketServer: public Closeable {
 public:
     SimpleSocketServer(int, AbstractEngine&);
     int start_listening();
-    void schedule_close();
-    std::mutex ready_mutex;
 private:
     int port;
-    bool close_scheduled;
+    int sockfd;
 
     AbstractEngine& engine;
     

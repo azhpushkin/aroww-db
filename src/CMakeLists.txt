@@ -16,6 +16,7 @@ set(SOURCES
     engine/workers.cpp
     network/socket_server.cpp
     network/connection.cpp
+    utils/closeable.cpp
 )
 set(LIB_SOURCES
     common/string_or_tomb.cpp

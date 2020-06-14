@@ -44,6 +44,7 @@ public:
 class DBEngine : public AbstractEngine {
 public:
     DBEngine(EngineConfiguration conf);
+    ~DBEngine();
     std::unique_ptr<Message> get(std::string key);
     std::unique_ptr<Message> set(std::string key, std::string value);
     std::unique_ptr<Message> drop(std::string key);

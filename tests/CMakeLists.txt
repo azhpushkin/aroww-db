@@ -6,6 +6,7 @@ set(TEST_FILES
     tests_messages.cpp
     tests_segment.cpp
     tests_library.cpp
+    tests_engine.cpp
     tests_main.cpp
 )
 

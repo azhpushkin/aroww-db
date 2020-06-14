@@ -4,6 +4,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <memory>
+#include <thread>
 
 #include "workers.fwd.hpp"
 #include "engine.fwd.hpp"
@@ -11,6 +12,7 @@
 #include "engine.hpp"
 #include "common/messages.hpp"
 #include "common/serialization.hpp"
+#include "utils/closeable.hpp"
 
 class ReadTask {
 public:
@@ -36,11 +38,11 @@ private:
 
 
 
-class ReadWorker {
+class ReadWorker: public Closeable {
 public:
     ReadWorker(DBEngine* engine, std::shared_ptr<ReadQueue> q);
     static void start(ReadWorker* worker);
-
+    std::thread* th;
 private:
     DBEngine* engine;
     std::shared_ptr<ReadQueue> read_queue;

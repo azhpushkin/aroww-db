@@ -64,10 +64,18 @@ DBEngine::DBEngine(EngineConfiguration conf_): conf(conf_) {
 
     for(unsigned int i = 0; i < conf.read_workers_amount; i++) {
         auto worker = std::make_shared<ReadWorker>(this, read_queue);
+        worker->th = new std::thread(&ReadWorker::start, worker.get());
         read_workers.push_back(worker);
-        new std::thread(&ReadWorker::start, worker.get());
     }
+}
 
+DBEngine::~DBEngine() {
+    for(auto worker: read_workers) {
+        worker->send_close_signal();
+    }
+    for(auto worker: read_workers) {
+        worker->await_closing();
+    }
 }
 
 

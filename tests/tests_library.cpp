@@ -13,7 +13,6 @@
 #include "engine/interface.hpp"
 #include "lib/aroww.hpp"
 
-
 using namespace std::literals::string_literals;
 
 
@@ -55,11 +54,12 @@ public:
 
         _socket_server = std::make_unique<SimpleSocketServer>(7333, engine);
         _server_thread = std::thread(&SimpleSocketServer::start_listening, _socket_server.get());
-        _socket_server->ready_mutex.lock();
     }
     ~TestServer() {
-        _socket_server->schedule_close();
-        _server_thread.join();  // wait until closed
+
+        _socket_server->send_close_signal();
+        _socket_server->await_closing();
+        _server_thread.join();  // ensure thread is finished
     }
 };
 
@@ -99,17 +99,4 @@ TEST_CASE( "Send and receive some messages" ) {
 
     }
     
-}
-
-TEST_CASE( "Send 10 messages in a row" ) {
-    TestServer server;
-
-    ArowwDB db{"localhost", "7333"};
-
-    for (int i = 0; i < 10; i++) {
-        server.engine.next_response = std::make_unique<MessageSetResponse>();
-        auto resp = db.set(std::to_string(i), "xxxxxxxxx");
-        REQUIRE(resp->get_flag() == SET_RESP);
-    }
-        
 }

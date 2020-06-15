@@ -5,8 +5,8 @@
 #define CATCH_CONFIG_ENABLE_BENCHMARKING
 #include "catch2/catch.hpp"
 #include "tests_config.hpp"
-#include "fmt/format.h"
 
+#include "utils/format.hpp"
 #include "engine/engine.hpp"
 
 void cleanup() {

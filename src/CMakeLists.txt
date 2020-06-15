@@ -32,6 +32,7 @@ set(TESTABLE_HDR_INCLUDE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}
 # Executables and libs
 add_executable(aroww-server ${SOURCES} server.cpp)
 add_library(aroww-db SHARED ${LIB_SOURCES})
+set_property(TARGET aroww-db PROPERTY POSITION_INDEPENDENT_CODE ON)
 add_library(aroww-db-for-tests SHARED ${SOURCES} ${LIB_SOURCES})
 
 # Target to run server

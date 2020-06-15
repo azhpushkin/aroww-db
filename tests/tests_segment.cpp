@@ -5,12 +5,13 @@
 #include <random>
 
 #include "catch2/catch.hpp"
-#include "fmt/format.h"
+#include "tests_config.hpp"
 
 #include "engine/engine.hpp"
 #include "engine/segment.hpp"
 #include "common/string_or_tomb.hpp"
-#include "tests_config.hpp"
+#include "utils/format.hpp"
+
 
 
 namespace fs = std::filesystem;

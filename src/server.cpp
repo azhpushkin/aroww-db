@@ -2,8 +2,6 @@
 #include <filesystem>
 
 #include "cxxopts.hpp"
-#define SPDLOG_FMT_EXTERNAL 1
-#include "spdlog/spdlog.h"
 
 #include "engine/engine.hpp"
 #include "network/socket_server.hpp"

@@ -11,11 +11,10 @@
 #include <optional>
 #include <variant>
 
-#include "fmt/format.h"
-
 #include "aroww.hpp"
 #include "common/messages.hpp"
 #include "common/string_or_tomb.hpp"
+#include "utils/format.hpp"
 
 
 #define WRONG_TYPE_MSG(EXP, GOT) fmt::format("Wrong message received: expected {:c}, got {:c}!", EXP, GOT)

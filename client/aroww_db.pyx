@@ -4,18 +4,22 @@ from libcpp.string cimport string
 
 from optional cimport optional
 
-
 cdef extern from "aroww.hpp" namespace "aroww":
+    
     cdef cppclass CppArowwDB "aroww::ArowwDB":
-        CppArowwDB(string host, string port) except+
+        CppArowwDB(string host, string port) except+RuntimeError
 
         string host
         string port
         int sockfd
 
-        optional[string] get(string key) except +
-        void set(string key, string value) except +
-        void drop(string key) except +
+        optional[string] get(string key) except +RuntimeError
+        void set(string key, string value) except +RuntimeError
+        void drop(string key) except +RuntimeError
+
+
+class ArowwException(RuntimeError):
+    pass
 
 
 cdef class ArowwDB:
@@ -26,11 +30,20 @@ cdef class ArowwDB:
 
     def get(self, key):
         cdef optional[string] result
-        result = deref(self.thisptr).get(key)
-        return result.value() if result.has_value() else None
+        try:
+            result = deref(self.thisptr).get(key)
+            return result.value() if result.has_value() else None
+        except RuntimeError as e:
+            raise ArowwException(*e.args)
     
     def set(self, key, value):
-        return deref(self.thisptr).set(key, value)
-
+        try:
+            return deref(self.thisptr).set(key, value)
+        except RuntimeError as e:
+            raise ArowwException(*e.args)
+        
     def drop(self, key):
-        return deref(self.thisptr).drop(key)
+        try:
+            return deref(self.thisptr).drop(key)
+        except RuntimeError as e:
+            raise ArowwException(*e.args)

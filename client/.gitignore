@@ -31,3 +31,10 @@ dmypy.json
 
 # pytype static type analyzer
 .pytype/
+
+
+# cython artifacts
+build/
+*.cpp
+*.c
+*.so

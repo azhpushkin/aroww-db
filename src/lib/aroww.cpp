@@ -21,25 +21,25 @@
 #define WRONG_TYPE_MSG(EXP, GOT) fmt::format("Wrong message received: expected {:c}, got {:c}!", EXP, GOT)
 
 // Private functions
-int open_socket(Aroww::ArowwDB* conn);
-std::unique_ptr<Message> get_result(Aroww::ArowwDB* conn);
+int open_socket(aroww::ArowwDB* conn);
+std::unique_ptr<Message> get_result(aroww::ArowwDB* conn);
 
 template<typename T>
 std::unique_ptr<T> check_and_convert(std::unique_ptr<Message> msg) {
 	if (msg->get_flag() == ERROR_RESP) {
 		auto error_msg = std::unique_ptr<MessageErrorResponse>((MessageErrorResponse*)msg.release());
 		
-		throw Aroww::ArowwException(error_msg->error_msg);
+		throw aroww::ArowwException(error_msg->error_msg);
 	}
 	if (T::get_flag_static() != msg->get_flag()) {
-		throw Aroww::ArowwException(WRONG_TYPE_MSG(T::get_flag_static(), msg->get_flag()));
+		throw aroww::ArowwException(WRONG_TYPE_MSG(T::get_flag_static(), msg->get_flag()));
 	}
 
 	return std::unique_ptr<T>((T*)msg.release());
 }
 
 
-namespace Aroww {
+namespace aroww {
 	ArowwException::ArowwException(std::string m): message(m) {}
 	const char * ArowwException::what () const noexcept {
 		return message.c_str();
@@ -112,7 +112,7 @@ void *get_in_addr(struct sockaddr *sa)
 }
 
 
-int open_socket(Aroww::ArowwDB* conn) {
+int open_socket(aroww::ArowwDB* conn) {
 	int sockfd;
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
@@ -152,7 +152,7 @@ int open_socket(Aroww::ArowwDB* conn) {
 }
 
 
-std::unique_ptr<Message> get_result(Aroww::ArowwDB* conn) {
+std::unique_ptr<Message> get_result(aroww::ArowwDB* conn) {
     int numbytes;
     char buf[1024];
     

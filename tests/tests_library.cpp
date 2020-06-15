@@ -67,7 +67,7 @@ public:
 
 TEST_CASE( "Basic commands " ) {
     TestServer server;
-    Aroww::ArowwDB db{"localhost", "7333"};
+    aroww::ArowwDB db{"localhost", "7333"};
     
     SECTION ("Simple SET") {
         server.engine.next_response = std::make_unique<MessageSetResponse>();
@@ -120,13 +120,13 @@ TEST_CASE( "Basic commands " ) {
 
 TEST_CASE( "Exceptions handling " ) {
     TestServer server;
-    Aroww::ArowwDB db{"localhost", "7333"};
+    aroww::ArowwDB db{"localhost", "7333"};
     
     SECTION ("Requested GET, SET returned") {
         server.engine.next_response = std::make_unique<MessageSetResponse>();
         REQUIRE_THROWS_MATCHES(
             db.get("first"),
-            Aroww::ArowwException,
+            aroww::ArowwException,
             Catch::Message("Wrong message received: expected g, got s!")); 
 
     }
@@ -135,7 +135,7 @@ TEST_CASE( "Exceptions handling " ) {
         server.engine.next_response = std::make_unique<MessageGetResponse>();
         REQUIRE_THROWS_MATCHES(
             db.set("first", "1"),
-            Aroww::ArowwException,
+            aroww::ArowwException,
             Catch::Message("Wrong message received: expected s, got g!")); 
     }
 
@@ -143,7 +143,7 @@ TEST_CASE( "Exceptions handling " ) {
         server.engine.next_response = std::make_unique<MessageGetRequest>();
         REQUIRE_THROWS_MATCHES(
             db.get("first"),
-            Aroww::ArowwException,
+            aroww::ArowwException,
             Catch::Message("Wrong message received: expected g, got G!")); 
     }
 
@@ -154,7 +154,7 @@ TEST_CASE( "Exceptions handling " ) {
 
         REQUIRE_THROWS_MATCHES(
             db.get("first"),
-            Aroww::ArowwException,
+            aroww::ArowwException,
             Catch::Message("Custom error message")); 
     }
 }

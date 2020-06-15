@@ -1,7 +1,7 @@
 #include <string>
 #include <optional>
 
-namespace Aroww {
+namespace aroww {
     class ArowwException : public std::exception {
     public:
         std::string message;

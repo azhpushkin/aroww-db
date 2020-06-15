@@ -17,8 +17,8 @@ debug_options = dict(
 
 
 basics_module = Extension(
-    'pyarowwdb',
-    sources=['aroww.pyx'],
+    'aroww_db',
+    sources=['aroww_db.pyx'],
     extra_compile_args=compile_args,
     libraries=["aroww-db"],
     language='c++',
@@ -30,7 +30,7 @@ basics_module = Extension(
 
 
 setup(
-    name='pyarowwdb',
-    packages=['pyarowwdb'],
+    name='aroww_db',
+    packages=['aroww_db'],
     ext_modules=cythonize(basics_module, compiler_directives={'language_level' : "3"})
 )

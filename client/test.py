@@ -1,9 +1,10 @@
-from aroww_db import ArowwDB, ArowwException
 import aroww_db
 
 
-db = ArowwDB(b"localhost", b"7333")
-db.set(b"123", b"asd")
-print(db.get(b"123"))
-db.drop(b"123")
-print(db.get(b"333"))
+db = aroww_db.ArowwDB("localhost", "7333")
+db.set("123", "asd\x00asd")
+assert db.get("123") == "asd\x00asd"  # zero is passed fine
+assert len(db.get("123")) == 7
+db.drop("123")
+assert db.get("333") is None
+assert db.get("123") is None

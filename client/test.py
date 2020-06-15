@@ -2,6 +2,8 @@ import aroww_db
 
 
 db = aroww_db.ArowwDB("localhost", "7333")
+print("host is", db.host, db.port)
+
 db.set("123", "asd\x00asd")
 assert db.get("123") == "asd\x00asd"  # zero is passed fine
 assert len(db.get("123")) == 7

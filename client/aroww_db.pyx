@@ -1,4 +1,5 @@
 # cython: c_string_type=unicode, c_string_encoding=utf8
+# cython: binding=True
 
 from cython.operator cimport dereference as deref
 from libcpp.memory cimport unique_ptr
@@ -26,9 +27,13 @@ class ArowwException(RuntimeError):
 
 cdef class ArowwDB:
     cdef unique_ptr[CppArowwDB] thisptr
+    cdef public string host
+    cdef public string port
 
     def __init__(self, host, port):
         self.thisptr.reset(new CppArowwDB(host, port))
+        self.host = host
+        self.port = port
 
     def get(self, key):
         cdef optional[string] result

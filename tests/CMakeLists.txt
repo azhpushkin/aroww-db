@@ -27,9 +27,9 @@ foreach(TARGET_NAME ${TEST_TARGETS_NAMES})
 endforeach(TARGET_NAME)
 
 # Benchmark target
-add_executable(bench_runner benchmark.cpp tests_main.cpp)
-set_target_properties(bench_runner PROPERTIES EXCLUDE_FROM_ALL TRUE)
+# add_executable(bench_runner benchmark.cpp tests_main.cpp)
+# set_target_properties(bench_runner PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
-add_custom_target(bench DEPENDS bench_runner)
-set_target_properties(bench PROPERTIES EXCLUDE_FROM_ALL TRUE)
-add_custom_command(TARGET bench POST_BUILD COMMAND $<TARGET_FILE:bench_runner>)
+# add_custom_target(bench DEPENDS bench_runner)
+# set_target_properties(bench PROPERTIES EXCLUDE_FROM_ALL TRUE)
+# add_custom_command(TARGET bench POST_BUILD COMMAND $<TARGET_FILE:bench_runner>)

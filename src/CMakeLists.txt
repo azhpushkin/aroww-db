@@ -41,5 +41,5 @@ set_target_properties(serv PROPERTIES EXCLUDE_FROM_ALL TRUE)
 add_custom_command(
     TARGET serv
     POST_BUILD COMMAND
-    $<TARGET_FILE:aroww-server> --datadir ${DIR_PATH}
+    $<TARGET_FILE:aroww-server> --datadir ${DIR_PATH} -v
 )

@@ -6,27 +6,46 @@ Inspired by "Designing Data-Intensive Applications" book and
 At a time of writing, simple key-value database, 
 created for learning purposes only.
 
+This repository consists
+* database code that implement key-value storage
+* simple protocol to encode and decode commands
+* client library to access database commands
+* Cython wrapper to use in fancy Python programs
 
 
-**Stuff to worry about:**
-- [x] ~~Different protocols support~~ Dont think need it anyway soon
-- [ ] Authentication of connection
-- [ ] Encryption of data send (openssl should be fine)
-- [ ] Sync and async write
-- [ ] Perhaps some simple benchmarking
-  ([LevelDB bench](http://www.lmdb.tech/bench/microbench/benchmark.html)
-  and [Facebook db_bench](https://github.com/facebook/rocksdb/wiki/Benchmarking-tools)
-  looks promising)
-- [ ] Still no namespace for some reason, need to add
+### How to try this out
+C++ code is launched via CMake targets.
+
+For a quick setup build and launch `serv` target, which will 
+instantiate files storage inside of the build directory and start the server
+on `localhost:7333`
+
+As a client, you can use simple Python wrapper which is inside of the `client` folder.
+Running `make` inside this folder would compile Python C Extension module which you can 
+import and try by yourself.
+
+`make connect` shortcut opens Python REPL with library loaded and `db` variable initialized.
+You can also take a look at the `test.py` file to see how wrapper is used:
+
+```python
+import aroww_db
+
+db = aroww_db.ArowwDB("localhost", "7333")
+
+db.set("my greetings", "Hello world!")
+assert db.get("my greetings") == "Hello world!"
+
+assert db.get("nothing") is None
+
+db.drop('my greetings')
+assert db.get('my greetings') is None
+```
+
+Restarting server and client keeps the keys persistent, so
+the state of the db would be restored.
 
 
-**Future plans on things to add:**
-- [x] Static code analyzers [clang-tidy, cppcheck, clazy]
-- [x] Sourse code formatter [clang-format]
-- [ ] Documentation and docs generation [doxygen]
-- [x] ~~Package managers? [Conan, vcpkg]~~ Okay, I see how bad things are with packaging in C++. 
-  Gonna leave this for better times.
-- [x] See if `fmt` lib is useful and add if needed
-- [x] Logging of event to gather metric [`spdlog` or what?] 
-- [x] Implementing some basic tests
-- [x] Some way of writing unit tests
+As for other C++ CMake targets, there are.
+* `arrow-db` which builds shared library with client-code only
+* `tests` (also aliased as `test`), which runs test cases for the library
+* `aroww-db-for-tests`, which build shared library specificaly for tests
